@@ -1,0 +1,12 @@
+.settings/
+Debug/
+Drivers/
+Inc/
+Middlewares/
+startup/
+.cproject
+.mxproject
+.project
+mx.scratch
+nosecone_fw.elf*
+STM32F405VG_FLASH.ld
