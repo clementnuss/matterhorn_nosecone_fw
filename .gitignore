@@ -1,7 +1,6 @@
 .settings/
 Debug/
 Drivers/
-Inc/
 Middlewares/
 startup/
 .cproject

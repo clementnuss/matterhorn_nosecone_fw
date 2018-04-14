@@ -11,9 +11,14 @@
 #include "datastructs.h"
 
 #define CIRC_BUFFER_SIZE 8
+#define CCMRAM __attribute__((section(".ccmram")))
+
+/*
+ * heap file, line 104, declare the RTOS heap in CCMRAM
+ * static uint8_t ucHeap[ configTOTAL_HEAP_SIZE ] __attribute__((section(".ccmram")));
+ */
 
 volatile uint32_t currentImuSeqNumber;
-TSS_data IMU_buffer[CIRC_BUFFER_SIZE];
 
 inline void uint8ToFloat (uint8_t* uint8Ptr, float* floatPtr)
 {

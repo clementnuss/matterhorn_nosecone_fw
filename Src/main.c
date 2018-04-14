@@ -53,7 +53,7 @@
 
 /* USER CODE BEGIN Includes */
 
-#include "include/Common.h"
+#include "Misc/Common.h"
 #include "Sensors/IMU/imu.h"
 
 /* USER CODE END Includes */
@@ -71,12 +71,15 @@ DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 osThreadId defaultTaskHandle;
-osThreadId fetchIMUHandle;
+osThreadId IMU_ifaceHandle;
+osThreadId xBeeTelemetryHandle;
+osMessageQId xBeeQueueHandle;
 osSemaphoreId IMU_IntSemHandle;
+osSemaphoreId xBeeTxBufferSemHandle;
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+TSS_data IMU_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -88,7 +91,8 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_USART3_UART_Init(void);
 void StartDefaultTask(void const * argument);
-extern void FetchIMU(void const * argument);
+extern void TK_IMU(void const * argument);
+extern void TK_xBeeTelemetry(void const * argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -146,6 +150,10 @@ int main(void)
   osSemaphoreDef(IMU_IntSem);
   IMU_IntSemHandle = osSemaphoreCreate(osSemaphore(IMU_IntSem), 1);
 
+  /* definition and creation of xBeeTxBufferSem */
+  osSemaphoreDef(xBeeTxBufferSem);
+  xBeeTxBufferSemHandle = osSemaphoreCreate(osSemaphore(xBeeTxBufferSem), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
 
@@ -160,15 +168,25 @@ int main(void)
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
-  /* definition and creation of fetchIMU */
-  osThreadDef(fetchIMU, FetchIMU, osPriorityNormal, 0, 128);
-  fetchIMUHandle = osThreadCreate(osThread(fetchIMU), NULL);
+  /* definition and creation of IMU_iface */
+  osThreadDef(IMU_iface, TK_IMU, osPriorityNormal, 0, 128);
+  IMU_ifaceHandle = osThreadCreate(osThread(IMU_iface), NULL);
+
+  /* definition and creation of xBeeTelemetry */
+  osThreadDef(xBeeTelemetry, TK_xBeeTelemetry, osPriorityIdle, 0, 128);
+  xBeeTelemetryHandle = osThreadCreate(osThread(xBeeTelemetry), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
+  /* Create the queue(s) */
+  /* definition and creation of xBeeQueue */
+  osMessageQDef(xBeeQueue, 16, Telemetry_Message);
+  xBeeQueueHandle = osMessageCreate(osMessageQ(xBeeQueue), NULL);
+
   /* USER CODE BEGIN RTOS_QUEUES */
+
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
  
@@ -452,16 +470,28 @@ void StartDefaultTask(void const * argument)
 {
 
   /* USER CODE BEGIN 5 */
+
+  HAL_GPIO_WritePin (GPS_ENn_GPIO_Port, GPS_ENn_Pin, GPIO_PIN_RESET);
+  osDelay (500);
+  HAL_GPIO_WritePin (GPS_RESETn_GPIO_Port, GPS_RESETn_Pin, GPIO_PIN_SET);
+
+
   /* Infinite loop */
   for (;;)
     {
-      float f = IMU_buffer[currentImuSeqNumber % CIRC_BUFFER_SIZE].temperatureC;
 
-      uint8_t temp[4];
-      floatToUint8(temp, &f);
+      TSS_data* current_IMU_data = &IMU_buffer[currentImuSeqNumber
+          % CIRC_BUFFER_SIZE];
 
-      HAL_UART_DMAResume (&huart3);
-      HAL_UART_Transmit_DMA (&huart3, (uint8_t*) temp, 4);
+      void* ptr = pvPortMalloc (sizeof(TSS_data));
+
+      TSS_data* d = ptr;
+      *d = *current_IMU_data;
+      Telemetry_Message m = {.ptr = ptr, .size = sizeof(TSS_data)};
+      osMessagePut(xBeeQueueHandle, &m, 50);
+
+      //HAL_ART_DMAResume (&huart3);
+      //HAL_UART_Transmit_DMA (&huart3, (uint8_t*) temp, 4);
       osDelay (10);
     }
   /* USER CODE END 5 */ 

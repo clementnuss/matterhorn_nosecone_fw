@@ -9,7 +9,7 @@
 #define IMU_IMU_H_
 
 #include "cmsis_os.h"
-#include "../../include/Common.h"
+#include "Misc/Common.h"
 
 HAL_StatusTypeDef initIMU ();
 HAL_StatusTypeDef waitTssState (uint32_t timeoutmMs, uint8_t tss_spi_state);
@@ -25,7 +25,7 @@ void insertCommandIntoBuffer (uint8_t* commandBuffer, uint16_t* pos,
                               uint16_t tss_send_packet_number);
 
 
-void FetchIMU (void const * argument);
+void TK_IMU (void const * argument);
 
 typedef enum TSS_Stream_Command_Enum
 {

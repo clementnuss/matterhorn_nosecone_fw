@@ -20,4 +20,10 @@ typedef struct
   float temperatureC;
 } TSS_data;
 
+typedef struct
+{
+  void* ptr;
+  uint16_t size;
+} Telemetry_Message;
+
 #endif /* INCLUDE_DATASTRUCTS_H_ */

@@ -24,6 +24,7 @@
 SPI_HandleTypeDef* IMU_hspi;
 extern SPI_HandleTypeDef hspi1;
 extern osSemaphoreId IMU_IntSemHandle;
+extern TSS_data IMU_buffer[];
 
 uint32_t SPI_Timeout = 100;
 uint32_t SPI_rate_kbpms = 325;
@@ -67,7 +68,7 @@ uint8_t rxBuffer[TSS_COMM_BUFFER_SIZE];
  * reset TSS when impossible to communicate
  */
 
-void FetchIMU (void const * argument)
+void TK_IMU (void const * argument)
 {
   IMU_hspi = &hspi1;
   initIMU ();
@@ -75,19 +76,21 @@ void FetchIMU (void const * argument)
   //configure interrupt pin
   sendCommand (TSS_SET_PIN_MODE, TSS_PIN_MODE, sizeof(TSS_PIN_MODE), NULL, 0);
 
-
-
   for (;;)
     {
       HAL_GPIO_WritePin (AUX_IO_10_GPIO_Port, AUX_IO_10_Pin, GPIO_PIN_SET);
-      osSemaphoreWait (IMU_IntSemHandle, SPI_Timeout);
 
-      TSS_data* newImuDataSet = &IMU_buffer[currentImuSeqNumber % CIRC_BUFFER_SIZE];
-      processBuffer (newImuDataSet);
+      int32_t ret = osSemaphoreWait (IMU_IntSemHandle, SPI_Timeout);
+      if (ret == osOK)
+        {
+          TSS_data* newImuDataSet = &IMU_buffer[currentImuSeqNumber
+              % CIRC_BUFFER_SIZE];
+          processBuffer (newImuDataSet);
 
-      HAL_GPIO_WritePin (AUX_IO_10_GPIO_Port, AUX_IO_10_Pin, GPIO_PIN_RESET);
-      currentImuSeqNumber++;
-
+          HAL_GPIO_WritePin (AUX_IO_10_GPIO_Port, AUX_IO_10_Pin,
+                             GPIO_PIN_RESET);
+          currentImuSeqNumber++;
+        }
     }
 
 }
@@ -104,7 +107,6 @@ HAL_StatusTypeDef initIMU ()
 
   sendCommand (TSS_SET_ACCELEROMETER_RANGE, TSS_ACC_RANGE_ARGS,
                sizeof(TSS_ACC_RANGE_ARGS), NULL, 0);
-
 
   /* Takes 45ms to be set. default is already Kalman filter, so no need to set again
    sendCommand (TSS_SET_FILTER_MODE, TSS_FILTER_MODE,
@@ -132,12 +134,12 @@ HAL_StatusTypeDef initIMU ()
 void HAL_SPI_TxRxCpltCallback (SPI_HandleTypeDef *hspi)
 {
   osSemaphoreRelease (IMU_IntSemHandle);
-  HAL_SPI_DMAStop(IMU_hspi);
+  HAL_SPI_DMAStop (IMU_hspi);
 }
 
 HAL_StatusTypeDef getIMUdataDMA ()
 {
-  HAL_SPI_DMAResume(IMU_hspi);
+  HAL_SPI_DMAResume (IMU_hspi);
   return HAL_SPI_TransmitReceive_DMA (IMU_hspi, GET_DATA_COMMAND_BUFFER,
                                       rxBuffer, TSS_COMM_BUFFER_SIZE);
 }
@@ -186,7 +188,8 @@ void processBuffer (TSS_data* tss_data)
 
 void increasePosUntilTssReady (uint16_t*pos)
 {
-  while (rxBuffer[(*pos)++] != TSS_SPI_READY_STATE && (*pos < TSS_COMM_BUFFER_SIZE))
+  while (rxBuffer[(*pos)++] != TSS_SPI_READY_STATE
+      && (*pos < TSS_COMM_BUFFER_SIZE))
     ;
 }
 
