@@ -17,7 +17,7 @@ HAL_StatusTypeDef sendCommand (uint8_t command, uint8_t* args, uint8_t argsSize,
                                uint8_t* rxData, uint16_t rxSize);
 
 HAL_StatusTypeDef getIMUdataDMA ();
-void processBuffer (TSS_data* tss_data);
+void processBuffer (IMU_data* tss_data);
 void increasePosUntilTssReady (uint16_t*pos);
 
 void insertCommandIntoBuffer (uint8_t* commandBuffer, uint16_t* pos,

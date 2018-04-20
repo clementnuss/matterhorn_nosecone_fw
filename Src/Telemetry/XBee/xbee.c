@@ -37,7 +37,7 @@ static uint8_t XBEE_FRAME_OPTIONS[XBEE_FRAME_OPTIONS_SIZE] =
       0x43 };          // Transmit options (disable ACK and Route discovery)
 
 uint8_t XBEE_FRAME_OPTIONS_CRC = 0;
-uint8_t XBEE_SEND_FRAME_TIMEOUT_MS = 0;
+uint8_t XBEE_SEND_FRAME_TIMEOUT_MS = 40;
 
 uint8_t currentCrc = 0;
 uint8_t payloadBuffer[XBEE_PAYLOAD_SIZE];
@@ -53,7 +53,7 @@ void TK_xBeeTelemetry (const void* args)
     {
       if (osSemaphoreGetCount (xBeeTxBufferSemHandle) == 0)
         {
-          continue;
+          osDelay(3);
         }
 
       osEvent event = osMessageGet (xBeeQueueHandle, XBEE_SEND_FRAME_TIMEOUT_MS);
@@ -63,6 +63,9 @@ void TK_xBeeTelemetry (const void* args)
           sendData (m->ptr, m->size);
           vPortFree (m->ptr);
         }
+      else {
+          sendXbeeFrame();
+      }
     }
 }
 
@@ -105,9 +108,7 @@ void sendXbeeFrame ()
       return;
     }
 
-  currentPos = 0;
-
-  uint16_t payloadAndConfigSize = XBEE_FRAME_OPTIONS_SIZE + currentPos + 1;
+  uint16_t payloadAndConfigSize = XBEE_FRAME_OPTIONS_SIZE + currentPos;
 
   uint16_t pos = 0;
   txDmaBuffer[pos++] = XBEE_START;
@@ -121,14 +122,21 @@ void sendXbeeFrame ()
 
   for (int i = 0; i < currentPos; ++i)
     {
-      uint8_t esc;
-      if ((esc = escapedCharacter(payloadBuffer[i]))) {
-          txDmaBuffer[pos++] = esc;
-      }
-      txDmaBuffer[pos++] = payloadBuffer[i];
+      uint8_t escapedChar;
+      if ((escapedChar = escapedCharacter (payloadBuffer[i])))
+        {
+          txDmaBuffer[pos++] = XBEE_ESCAPE;
+          txDmaBuffer[pos++] = escapedChar;
+        }
+      else
+        {
+          txDmaBuffer[pos++] = payloadBuffer[i];
+        }
+
       currentCrc += payloadBuffer[i];
     }
-  txDmaBuffer[pos++] = 0xff;
+
+  currentCrc = 0xff - currentCrc;
   txDmaBuffer[pos++] = currentCrc;
   HAL_UART_Transmit_DMA (xBee_huart, txDmaBuffer, pos);
 
@@ -154,7 +162,7 @@ void initXbee ()
     {
       checksum += XBEE_FRAME_OPTIONS[i];
     }
-  XBEE_FRAME_OPTIONS_CRC = 0xFF - checksum;
+  XBEE_FRAME_OPTIONS_CRC = checksum;
 }
 
 inline uint8_t escapedCharacter (uint8_t byte)
@@ -162,7 +170,7 @@ inline uint8_t escapedCharacter (uint8_t byte)
   switch (byte)
     {
     case 0x7e:
-      return 0x53;
+      return 0x5e;
     case 0x7d:
       return 0x5d;
     case 0x11:

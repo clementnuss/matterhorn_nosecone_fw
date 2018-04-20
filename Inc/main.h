@@ -69,6 +69,12 @@
 #define IMU_MOSI_GPIO_Port GPIOA
 #define GPS_ENn_Pin GPIO_PIN_5
 #define GPS_ENn_GPIO_Port GPIOC
+#define ABS_P_SENS_ENn_Pin GPIO_PIN_0
+#define ABS_P_SENS_ENn_GPIO_Port GPIOB
+#define DIF_P_SENS_ENn_Pin GPIO_PIN_1
+#define DIF_P_SENS_ENn_GPIO_Port GPIOB
+#define SD_ENn_Pin GPIO_PIN_9
+#define SD_ENn_GPIO_Port GPIOE
 #define GPS_RESETn_Pin GPIO_PIN_10
 #define GPS_RESETn_GPIO_Port GPIOE
 #define GPS_SWITCH_Pin GPIO_PIN_11

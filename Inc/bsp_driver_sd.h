@@ -1,7 +1,8 @@
 /**
-  ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
+ ******************************************************************************
+  * @file    bsp_driver_sd.h for F4 (based on stm324x9i_eval_sd.h)
+  * @brief   This file contains the common defines and functions prototypes for 
+  *          the bsp_driver_sd.c driver.
   ******************************************************************************
   * This notice applies to any and all portions of this file
   * that are not between comment pairs USER CODE BEGIN and
@@ -46,45 +47,70 @@
   ******************************************************************************
   */
 
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __STM32F4_SD_H
+#define __STM32F4_SD_H
+
+#ifdef __cplusplus
+ extern "C" {
+#endif 
+
 /* Includes ------------------------------------------------------------------*/
-#include "FreeRTOS.h"
-#include "task.h"
+#include "stm32f4xx_hal.h"
 
-/* USER CODE BEGIN Includes */     
+/* Exported types --------------------------------------------------------*/ 
+/** 
+  * @brief SD Card information structure 
+  */
+#define BSP_SD_CardInfo HAL_SD_CardInfoTypeDef
 
-/* USER CODE END Includes */
+/* Exported constants --------------------------------------------------------*/ 
+/**
+  * @brief  SD status structure definition  
+  */     
+#define   MSD_OK                        ((uint8_t)0x00)
+#define   MSD_ERROR                     ((uint8_t)0x01)
 
-/* Variables -----------------------------------------------------------------*/
+/** 
+  * @brief  SD transfer state definition  
+  */     
+#define   SD_TRANSFER_OK                ((uint8_t)0x00)
+#define   SD_TRANSFER_BUSY              ((uint8_t)0x01)
 
-/* USER CODE BEGIN Variables */
-volatile unsigned long ulHighFrequencyTimerTicks = 0;
-/* USER CODE END Variables */
+#define SD_PRESENT               ((uint8_t)0x01)
+#define SD_NOT_PRESENT           ((uint8_t)0x00)
+#define SD_DATATIMEOUT           ((uint32_t)100000000)
 
-/* Function prototypes -------------------------------------------------------*/
+#ifdef OLD_API
+/* kept to avoid issue when migrating old projects. */
+/* USER CODE BEGIN 0 */
 
-/* USER CODE BEGIN FunctionPrototypes */
-
-/* USER CODE END FunctionPrototypes */
-
-/* Hook prototypes */
-void configureTimerForRunTimeStats(void);
-unsigned long getRunTimeCounterValue(void);
-
-/* USER CODE BEGIN 1 */
-/* Functions needed when configGENERATE_RUN_TIME_STATS is on */
-__weak void configureTimerForRunTimeStats (void)
-{
-
+/* USER CODE END 0 */ 
+#else
+/* USER CODE BEGIN BSP_H_CODE */
+/* Exported functions --------------------------------------------------------*/   
+uint8_t BSP_SD_Init(void);
+uint8_t BSP_SD_ITConfig(void);
+void    BSP_SD_DetectIT(void);
+void    BSP_SD_DetectCallback(void);
+uint8_t BSP_SD_ReadBlocks(uint32_t *pData, uint32_t ReadAddr, uint32_t NumOfBlocks, uint32_t Timeout);
+uint8_t BSP_SD_WriteBlocks(uint32_t *pData, uint32_t WriteAddr, uint32_t NumOfBlocks, uint32_t Timeout);
+uint8_t BSP_SD_ReadBlocks_DMA(uint32_t *pData, uint32_t ReadAddr, uint32_t NumOfBlocks);
+uint8_t BSP_SD_WriteBlocks_DMA(uint32_t *pData, uint32_t WriteAddr, uint32_t NumOfBlocks);
+uint8_t BSP_SD_Erase(uint32_t StartAddr, uint32_t EndAddr);
+void BSP_SD_IRQHandler(void);
+void BSP_SD_DMA_Tx_IRQHandler(void);
+void BSP_SD_DMA_Rx_IRQHandler(void);
+uint8_t BSP_SD_GetCardState(void);
+void    BSP_SD_GetCardInfo(HAL_SD_CardInfoTypeDef *CardInfo);
+uint8_t BSP_SD_IsDetected(void);
+/* USER CODE END BSP_H_CODE */
+#endif
+   
+#ifdef __cplusplus
 }
+#endif
 
-unsigned long getRunTimeCounterValue (void)
-{
-  return ulHighFrequencyTimerTicks;
-}
-/* USER CODE END 1 */
-
-/* USER CODE BEGIN Application */
-
-/* USER CODE END Application */
+#endif /* __STM32F4_SD_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

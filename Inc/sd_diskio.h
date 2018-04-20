@@ -1,7 +1,7 @@
 /**
   ******************************************************************************
-  * File Name          : freertos.c
-  * Description        : Code for freertos applications
+  * @file    sd_diskio.h (based on sd_diskio_dma_rtos_template.h v2.0.2)
+  * @brief   Header for sd_diskio.c module
   ******************************************************************************
   * This notice applies to any and all portions of this file
   * that are not between comment pairs USER CODE BEGIN and
@@ -46,45 +46,26 @@
   ******************************************************************************
   */
 
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __SD_DISKIO_H
+#define __SD_DISKIO_H
+
+/* USER CODE BEGIN firstSection */ 
+/* can be used to modify / undefine following code or add new definitions */
+/* USER CODE END firstSection */
+
 /* Includes ------------------------------------------------------------------*/
-#include "FreeRTOS.h"
-#include "task.h"
+#include "bsp_driver_sd.h"
+/* Exported types ------------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
+/* Exported functions ------------------------------------------------------- */
+extern const Diskio_drvTypeDef  SD_Driver;
 
-/* USER CODE BEGIN Includes */     
+/* USER CODE BEGIN lastSection */ 
+/* can be used to modify / undefine previous code or add new definitions */
+/* USER CODE END lastSection */
 
-/* USER CODE END Includes */
-
-/* Variables -----------------------------------------------------------------*/
-
-/* USER CODE BEGIN Variables */
-volatile unsigned long ulHighFrequencyTimerTicks = 0;
-/* USER CODE END Variables */
-
-/* Function prototypes -------------------------------------------------------*/
-
-/* USER CODE BEGIN FunctionPrototypes */
-
-/* USER CODE END FunctionPrototypes */
-
-/* Hook prototypes */
-void configureTimerForRunTimeStats(void);
-unsigned long getRunTimeCounterValue(void);
-
-/* USER CODE BEGIN 1 */
-/* Functions needed when configGENERATE_RUN_TIME_STATS is on */
-__weak void configureTimerForRunTimeStats (void)
-{
-
-}
-
-unsigned long getRunTimeCounterValue (void)
-{
-  return ulHighFrequencyTimerTicks;
-}
-/* USER CODE END 1 */
-
-/* USER CODE BEGIN Application */
-
-/* USER CODE END Application */
+#endif /* __SD_DISKIO_H */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+

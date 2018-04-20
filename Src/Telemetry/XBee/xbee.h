@@ -16,8 +16,13 @@
 #define XBEE_PERFORMANCE_BPS 80000
 
 void initXbee ();
-void TK_xBeeTelemetry(const void* args);
+void TK_xBeeTelemetry (const void* args);
 
+void sendData (uint8_t* txData, uint16_t txDataSize);
+
+void sendXbeeFrame ();
+
+void addToBuffer (uint8_t* txData, uint16_t txDataSize);
 
 uint8_t escapedCharacter (uint8_t byte);
 

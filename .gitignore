@@ -6,6 +6,10 @@ startup/
 .cproject
 .mxproject
 .project
+
+.vs/
+.idea/
+
 mx.scratch
 nosecone_fw.elf*
 STM32F405VG_FLASH.ld
