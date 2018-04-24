@@ -13,3 +13,9 @@ startup/
 mx.scratch
 nosecone_fw.elf*
 STM32F405VG_FLASH.ld
+
+# ADDED BY ERIC
+*.xml
+STM32F405VGTx_FLASH.ld
+*.swp
+
