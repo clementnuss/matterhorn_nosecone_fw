@@ -85,6 +85,7 @@ osThreadId xBeeTelemetryHandle;
 osThreadId fetchFBarometerHandle;
 osThreadId centralizeDataHandle;
 osThreadId xBee_RCHandle;
+osThreadId state_machineHandle;
 osMessageQId xBeeQueueHandle;
 osSemaphoreId IMU_IntSemHandle;
 osSemaphoreId xBeeTxBufferSemHandle;
@@ -94,7 +95,7 @@ osSemaphoreId pressureSensorI2cSemHandle;
 /* Private variables ---------------------------------------------------------*/
 
 IMU_data IMU_buffer[CIRC_BUFFER_SIZE] CCMRAM;
-IMU_data BARO_buffer[CIRC_BUFFER_SIZE] CCMRAM;
+BARO_data BARO_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 
 UART_HandleTypeDef* xBee_huart;
 
@@ -117,6 +118,7 @@ extern void TK_xBeeTelemetry(void const * argument);
 extern void TK_fetchBarometer(void const * argument);
 extern void TK_data(void const * argument);
 extern void TK_xBee_receive(void const * argument);
+void TK_state_machine(void const * argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -226,6 +228,10 @@ int main(void)
   osThreadDef(xBee_RC, TK_xBee_receive, osPriorityNormal, 0, 128);
   xBee_RCHandle = osThreadCreate(osThread(xBee_RC), NULL);
 
+  /* definition and creation of state_machine */
+  osThreadDef(state_machine, TK_state_machine, osPriorityHigh, 0, 128);
+  state_machineHandle = osThreadCreate(osThread(state_machine), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -259,13 +265,6 @@ int main(void)
   /* USER CODE END 3 */
 
 }
-
-void initPeripherals ()
-{
-  xBee_huart = &huart3;
-  HAL_UART_Init(xBee_huart);
-}
-
 
 /**
   * @brief System Clock Configuration
@@ -584,6 +583,13 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void initPeripherals ()
+{
+  xBee_huart = &huart3;
+  HAL_UART_Init(xBee_huart);
+}
+
+
 /*
  * IMU interrupt handler
  */
@@ -645,6 +651,18 @@ void StartDefaultTask(void const * argument)
       osDelay (10);
     }
   /* USER CODE END 5 */ 
+}
+
+/* TK_state_machine function */
+__weak void TK_state_machine(void const * argument)
+{
+  /* USER CODE BEGIN TK_state_machine */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END TK_state_machine */
 }
 
 /**

@@ -12,7 +12,7 @@
  *
  * For a mass or motor change, check :
  * 	- ROCKET_CST_LAUNCH_TRIG_ACCEL
- * 	- ROCKET_CST_LIFTOFF_TRIG_AGL
+ * 	- ROCKET_CST_MIN_TRIG_AGL
  *
  */
 
@@ -24,12 +24,12 @@
  */
 
 #define ROCKET_CST_LIFTOFF_TRIG_ACCEL 3 // acceleration lift-off detection trigger [g]
-#define ROCKET_CST_LIFTOFF_TRIG_AGL 50 // altitude above ground level lift-off detection trigger [m]
+#define ROCKET_CST_MIN_TRIG_AGL 300 // min altitude above ground level to allow apogee detection [m]
 #define ROCKET_CST_MOTOR_BURNTIME 3150 // motor burn time [ms]
 /*
  * CALIBRATION DATA
  */
 
-volatile int calib_initial_altitude;
+volatile float32_t calib_initial_altitude;
 
 #endif /* MISC_ROCKET_CONSTANTS_H_ */
