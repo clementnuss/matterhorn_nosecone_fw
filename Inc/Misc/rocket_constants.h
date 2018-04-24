@@ -25,7 +25,7 @@
 
 #define ROCKET_CST_LIFTOFF_TRIG_ACCEL 3 // acceleration lift-off detection trigger [g]
 #define ROCKET_CST_LIFTOFF_TRIG_AGL 50 // altitude above ground level lift-off detection trigger [m]
-
+#define ROCKET_CST_MOTOR_BURNTIME 3150 // motor burn time [ms]
 /*
  * CALIBRATION DATA
  */
