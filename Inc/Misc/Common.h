@@ -2,7 +2,7 @@
  * Common.h
  *
  *  Created on: 4 Apr 2018
- *      Author: Clément Nussbaumer
+ *      Author: Clï¿½ment Nussbaumer
  */
 
 #ifndef INCLUDE_COMMON_H_
@@ -15,6 +15,12 @@
 #define CCMRAM __attribute__((section(".ccmram")))
 
 extern TIM_HandleTypeDef htim7;
+
+/*
+ * States decleration
+ */
+
+enum states {STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_APOGEE, STATE_MAINEVENT} currentState;
 
 /*
  * heap file, line 104, declare the RTOS heap in CCMRAM

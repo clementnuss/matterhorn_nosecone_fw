@@ -18,4 +18,9 @@ STM32F405VG_FLASH.ld
 *.xml
 STM32F405VGTx_FLASH.ld
 *.swp
-
+*.orig
+*BACKUP*
+*BASE*
+*LOCAL*
+*REMOTE*
+*.osx.project

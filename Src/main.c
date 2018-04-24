@@ -73,7 +73,6 @@ DMA_HandleTypeDef hdma_spi1_tx;
 
 TIM_HandleTypeDef htim7;
 
-UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
@@ -84,7 +83,7 @@ osThreadId IMU_ifaceHandle;
 osThreadId xBeeTelemetryHandle;
 osThreadId fetchFBarometerHandle;
 osThreadId centralizeDataHandle;
-osThreadId xBee_RCHandle;
+osThreadId state_machineHandle;
 osMessageQId xBeeQueueHandle;
 osSemaphoreId IMU_IntSemHandle;
 osSemaphoreId xBeeTxBufferSemHandle;
@@ -101,22 +100,21 @@ UART_HandleTypeDef* xBee_huart;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config (void);
-static void MX_GPIO_Init (void);
-static void MX_DMA_Init (void);
-static void MX_SPI1_Init (void);
-static void MX_USART1_UART_Init (void);
-static void MX_TIM7_Init (void);
-static void MX_USART3_UART_Init (void);
-static void MX_I2C2_Init (void);
-static void MX_SDIO_SD_Init (void);
-static void MX_UART4_Init (void);
-void StartDefaultTask (void const * argument);
-extern void TK_IMU (void const * argument);
-extern void TK_xBeeTelemetry (void const * argument);
-extern void TK_fetchBarometer (void const * argument);
-extern void TK_data (void const * argument);
-extern void TK_xBee_receive (void const * argument);
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
+static void MX_SPI1_Init(void);
+static void MX_USART1_UART_Init(void);
+static void MX_TIM7_Init(void);
+static void MX_USART3_UART_Init(void);
+static void MX_I2C2_Init(void);
+static void MX_SDIO_SD_Init(void);
+void StartDefaultTask(void const * argument);
+extern void TK_IMU(void const * argument);
+extern void TK_xBeeTelemetry(void const * argument);
+extern void TK_fetchBarometer(void const * argument);
+extern void TK_data(void const * argument);
+extern void TK_state_machine(void const * argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -157,15 +155,14 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init ();
-  MX_DMA_Init ();
-  MX_SPI1_Init ();
-  MX_USART1_UART_Init ();
-  MX_TIM7_Init ();
-  MX_USART3_UART_Init ();
-  MX_I2C2_Init ();
-  MX_SDIO_SD_Init ();
-  MX_UART4_Init ();
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_SPI1_Init();
+  MX_USART1_UART_Init();
+  MX_TIM7_Init();
+  MX_USART3_UART_Init();
+  MX_I2C2_Init();
+  MX_SDIO_SD_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT (&htim7);
   HAL_GPIO_WritePin (GPS_ENn_GPIO_Port, GPS_ENn_Pin, GPIO_PIN_RESET);
@@ -222,9 +219,9 @@ int main(void)
   osThreadDef(centralizeData, TK_data, osPriorityNormal, 0, 128);
   centralizeDataHandle = osThreadCreate(osThread(centralizeData), NULL);
 
-  /* definition and creation of xBee_RC */
-  osThreadDef(xBee_RC, TK_xBee_receive, osPriorityNormal, 0, 128);
-  xBee_RCHandle = osThreadCreate (osThread(xBee_RC), NULL);
+  /* definition and creation of state_machine */
+  osThreadDef(state_machine, TK_state_machine, osPriorityIdle, 0, 128);
+  state_machineHandle = osThreadCreate(osThread(state_machine), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -259,15 +256,6 @@ int main(void)
   /* USER CODE END 3 */
 
 }
-
-/* USER CODE BEGIN 10 */
-
-void initPeripherals ()
-{
-  xBee_huart = &huart3;
-  HAL_UART_Init(xBee_huart);
-}
-/* USER CODE END 10 */
 
 /**
   * @brief System Clock Configuration
@@ -409,25 +397,6 @@ static void MX_TIM7_Init(void)
 
 }
 
-/* UART4 init function */
-static void MX_UART4_Init (void)
-{
-
-  huart4.Instance = UART4;
-  huart4.Init.BaudRate = 115200;
-  huart4.Init.WordLength = UART_WORDLENGTH_8B;
-  huart4.Init.StopBits = UART_STOPBITS_1;
-  huart4.Init.Parity = UART_PARITY_NONE;
-  huart4.Init.Mode = UART_MODE_TX_RX;
-  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init (&huart4) != HAL_OK)
-    {
-      _Error_Handler (__FILE__, __LINE__);
-    }
-
-}
-
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
@@ -492,11 +461,11 @@ static void MX_DMA_Init(void)
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
   /* DMA2_Stream3_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority (DMA2_Stream3_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ (DMA2_Stream3_IRQn);
+  HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
   /* DMA2_Stream6_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority (DMA2_Stream6_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ (DMA2_Stream6_IRQn);
+  HAL_NVIC_SetPriority(DMA2_Stream6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream6_IRQn);
 
 }
 
