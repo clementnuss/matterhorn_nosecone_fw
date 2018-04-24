@@ -6,7 +6,7 @@ startup/
 .cproject
 .mxproject
 .project
-
+cmake-build-*/
 .vs/
 .idea/
 

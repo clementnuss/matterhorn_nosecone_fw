@@ -64,6 +64,7 @@ DMA_HandleTypeDef hdma_i2c2_rx;
 DMA_HandleTypeDef hdma_i2c2_tx;
 
 SD_HandleTypeDef hsd;
+DMA_HandleTypeDef hdma_sdio;
 
 SPI_HandleTypeDef hspi1;
 DMA_HandleTypeDef hdma_spi1_rx;
@@ -71,6 +72,7 @@ DMA_HandleTypeDef hdma_spi1_tx;
 
 TIM_HandleTypeDef htim7;
 
+UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
@@ -81,6 +83,7 @@ osThreadId IMU_ifaceHandle;
 osThreadId xBeeTelemetryHandle;
 osThreadId fetchFBarometerHandle;
 osThreadId centralizeDataHandle;
+osThreadId xBee_RCHandle;
 osMessageQId xBeeQueueHandle;
 osSemaphoreId IMU_IntSemHandle;
 osSemaphoreId xBeeTxBufferSemHandle;
@@ -91,6 +94,8 @@ osSemaphoreId pressureSensorI2cSemHandle;
 
 IMU_data IMU_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 IMU_data BARO_buffer[CIRC_BUFFER_SIZE] CCMRAM;
+
+UART_HandleTypeDef* xBee_huart;
 
 /* USER CODE END PV */
 
@@ -104,14 +109,18 @@ static void MX_TIM7_Init (void);
 static void MX_USART3_UART_Init (void);
 static void MX_I2C2_Init (void);
 static void MX_SDIO_SD_Init (void);
+static void MX_UART4_Init (void);
 void StartDefaultTask (void const * argument);
 extern void TK_IMU (void const * argument);
 extern void TK_xBeeTelemetry (void const * argument);
 extern void TK_fetchBarometer (void const * argument);
 extern void TK_data (void const * argument);
+extern void TK_xBee_receive (void const * argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
+
+void initPeripherals();
 
 /* USER CODE END PFP */
 
@@ -155,11 +164,13 @@ int main (void)
   MX_USART3_UART_Init ();
   MX_I2C2_Init ();
   MX_SDIO_SD_Init ();
+  MX_UART4_Init ();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT (&htim7);
   HAL_GPIO_WritePin (GPS_ENn_GPIO_Port, GPS_ENn_Pin, GPIO_PIN_RESET);
 
   initBarometer ();
+  initPeripherals ();
 
   /* USER CODE END 2 */
 
@@ -210,6 +221,10 @@ int main (void)
   osThreadDef(centralizeData, TK_data, osPriorityNormal, 0, 128);
   centralizeDataHandle = osThreadCreate (osThread(centralizeData), NULL);
 
+  /* definition and creation of xBee_RC */
+  osThreadDef(xBee_RC, TK_xBee_receive, osPriorityNormal, 0, 128);
+  xBee_RCHandle = osThreadCreate (osThread(xBee_RC), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -242,6 +257,15 @@ int main (void)
   /* USER CODE END 3 */
 
 }
+
+/* USER CODE BEGIN 10 */
+
+void initPeripherals ()
+{
+  xBee_huart = &huart3;
+  HAL_UART_Init(xBee_huart);
+}
+/* USER CODE END 10 */
 
 /**
  * @brief System Clock Configuration
@@ -383,6 +407,25 @@ static void MX_TIM7_Init (void)
 
 }
 
+/* UART4 init function */
+static void MX_UART4_Init (void)
+{
+
+  huart4.Instance = UART4;
+  huart4.Init.BaudRate = 115200;
+  huart4.Init.WordLength = UART_WORDLENGTH_8B;
+  huart4.Init.StopBits = UART_STOPBITS_1;
+  huart4.Init.Parity = UART_PARITY_NONE;
+  huart4.Init.Mode = UART_MODE_TX_RX;
+  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init (&huart4) != HAL_OK)
+    {
+      _Error_Handler (__FILE__, __LINE__);
+    }
+
+}
+
 /* USART1 init function */
 static void MX_USART1_UART_Init (void)
 {
@@ -451,6 +494,9 @@ static void MX_DMA_Init (void)
   /* DMA2_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority (DMA2_Stream3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ (DMA2_Stream3_IRQn);
+  /* DMA2_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority (DMA2_Stream6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ (DMA2_Stream6_IRQn);
 
 }
 
@@ -555,14 +601,6 @@ void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin)
 
 /* USER CODE END 4 */
 
-/* Private variables ------------------------------------------------------*/
-FATFS mynewdiskFatFs;
-/* File system object for User logical drive */
-FIL MyFile;
-/* File object */
-char mynewdiskPath[4];
-/* User logical drive path */
-
 /* StartDefaultTask function */
 void StartDefaultTask (void const * argument)
 {
@@ -576,21 +614,23 @@ void StartDefaultTask (void const * argument)
   uint8_t wtext[] = "text to write logical disk";
 
   /* File write buffer */
-  if (FATFS_LinkDriver (&SD_Driver, mynewdiskPath) == 0)
-    {
-      if (f_mount (&mynewdiskFatFs, (TCHAR const*) mynewdiskPath, 0) == FR_OK)
-        {
-          if (f_open (&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK)
-            {
-              if (f_write (&MyFile, wtext, sizeof(wtext), (void *) &wbytes) == FR_OK)
-                ;
-                {
-                  f_close (&MyFile);
-                }
-            }
-        }
-    }
-  FATFS_UnLinkDriver (mynewdiskPath);
+  /*
+   if (FATFS_LinkDriver (&SD_Driver, mynewdiskPath) == 0)
+   {
+   if (f_mount (&mynewdiskFatFs, (TCHAR const*) mynewdiskPath, 0) == FR_OK)
+   {
+   if (f_open (&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK)
+   {
+   if (f_write (&MyFile, wtext, sizeof(wtext), (void *) &wbytes) == FR_OK)
+   ;
+   {
+   f_close (&MyFile);
+   }
+   }
+   }
+   }
+   FATFS_UnLinkDriver (mynewdiskPath);
+   */
 
   HAL_GPIO_WritePin (GPS_ENn_GPIO_Port, GPS_ENn_Pin, GPIO_PIN_RESET);
   osDelay (500);

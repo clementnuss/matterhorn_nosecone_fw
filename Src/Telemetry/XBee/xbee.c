@@ -11,10 +11,9 @@
 #include "Misc/Common.h"
 
 extern osMessageQId xBeeQueueHandle;
-extern UART_HandleTypeDef huart3;
 osSemaphoreId xBeeTxBufferSemHandle;
 
-UART_HandleTypeDef* xBee_huart;
+extern UART_HandleTypeDef* xBee_huart;
 
 // UART settings
 #define XBEE_UART_TIMEOUT 30
@@ -40,8 +39,8 @@ uint8_t XBEE_FRAME_OPTIONS_CRC = 0;
 uint8_t XBEE_SEND_FRAME_TIMEOUT_MS = 40;
 
 uint8_t currentCrc = 0;
-uint8_t payloadBuffer[XBEE_PAYLOAD_SIZE];
-uint8_t txDmaBuffer[2 * XBEE_PAYLOAD_SIZE + XBEE_CHECKSUM_SIZE + XBEE_FRAME_BEGINNING_SIZE];
+uint8_t payloadBuffer[XBEE_PAYLOAD_MAX_SIZE];
+uint8_t txDmaBuffer[2 * XBEE_PAYLOAD_MAX_SIZE + XBEE_CHECKSUM_SIZE + XBEE_FRAME_BEGINNING_SIZE];
 uint16_t currentPos = 0;
 
 void TK_xBeeTelemetry (const void* args)
@@ -51,10 +50,6 @@ void TK_xBeeTelemetry (const void* args)
 
   for (;;)
     {
-      if (osSemaphoreGetCount (xBeeTxBufferSemHandle) == 0)
-        {
-          osDelay(3);
-        }
 
       osEvent event = osMessageGet (xBeeQueueHandle, XBEE_SEND_FRAME_TIMEOUT_MS);
       if (event.status == osEventMessage)
@@ -69,24 +64,30 @@ void TK_xBeeTelemetry (const void* args)
     }
 }
 
+void receiveData(){
+
+
+
+}
+
 void sendData (uint8_t* txData, uint16_t txDataSize)
 {
-  if (txDataSize >= XBEE_PAYLOAD_SIZE)
+  if (txDataSize >= XBEE_PAYLOAD_MAX_SIZE)
     {
       return;
     }
 
-  if (currentPos + txDataSize >= XBEE_PAYLOAD_SIZE)
+  if (currentPos + txDataSize >= XBEE_PAYLOAD_MAX_SIZE)
     {
       sendXbeeFrame ();
     }
 
-  if (currentPos + txDataSize < XBEE_PAYLOAD_SIZE)
+  if (currentPos + txDataSize < XBEE_PAYLOAD_MAX_SIZE)
     {
       addToBuffer (txData, txDataSize);
     }
 
-  if (XBEE_PAYLOAD_SIZE - currentPos < 20) // send the XBee frame if there remains less than 20 bytes available in the txDataBuffer
+  if (XBEE_PAYLOAD_MAX_SIZE - currentPos < 20) // send the XBee frame if there remains less than 20 bytes available in the txDataBuffer
     {
       sendXbeeFrame ();
     }
@@ -150,11 +151,8 @@ void HAL_UART_TxCpltCallback (UART_HandleTypeDef *huart)
 
 void initXbee ()
 {
-  xBee_huart = &huart3;
-  HAL_UART_Init (xBee_huart);
-  HAL_UART_DMAResume (xBee_huart);
 
-  uint packets_per_second = XBEE_PERFORMANCE_BPS / (8 * (XBEE_PAYLOAD_SIZE + 36));
+  uint packets_per_second = XBEE_PERFORMANCE_BPS / (8 * (XBEE_PAYLOAD_MAX_SIZE + 36));
   XBEE_SEND_FRAME_TIMEOUT_MS = 1000 / packets_per_second;
 
   uint8_t checksum = 0;

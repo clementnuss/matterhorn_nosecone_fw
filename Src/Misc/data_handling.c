@@ -8,7 +8,7 @@
 #include "cmsis_os.h"
 
 #include "Misc/Common.h"
-#include "data_handling.h"
+#include <Misc/data_handling.h>
 #include "Telemetry/telemetry_protocol.h"
 #include "Telemetry/simpleCRC.h"
 
@@ -46,7 +46,7 @@ void TK_data (void const * args)
             }
         }
 
-      osDelay (1);
+      osDelay (40);
     }
 }
 
