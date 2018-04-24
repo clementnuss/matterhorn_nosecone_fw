@@ -10,7 +10,7 @@
 
 #include "cmsis_os.h"
 
-#define XBEE_PAYLOAD_SIZE 214
+#define XBEE_PAYLOAD_MAX_SIZE 214
 #define XBEE_PACKET_SEND_TIMEOUT 20
 
 #define XBEE_PERFORMANCE_BPS 80000
@@ -25,5 +25,15 @@ void sendXbeeFrame ();
 void addToBuffer (uint8_t* txData, uint16_t txDataSize);
 
 uint8_t escapedCharacter (uint8_t byte);
+
+/* XBee receive headers */
+
+void TK_xBee_receive (const void* args);
+
+void processReceivedPacket ();
+
+void processReceivedByte (uint8_t rxByte);
+
+void resetStateMachine ();
 
 #endif /* TELEMETRY_XBEE_XBEE_H_ */
