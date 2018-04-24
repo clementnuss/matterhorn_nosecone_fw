@@ -165,6 +165,8 @@ osStatus processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
   int32_t p = ((int64_t) d1 * sens / (1LL << 21) - off) / (1LL << 15);
   ret->pressure = (float32_t) p / 100.0; //pressure in mbar (=hPa)
 
+
+
   if ((ret->temperature > MAX_TEMPERATURE) | (ret->temperature < MIN_TEMPERATURE) | (ret->pressure > MAX_PRESSURE)
       | (ret->pressure < MIN_PRESSURE))
     {

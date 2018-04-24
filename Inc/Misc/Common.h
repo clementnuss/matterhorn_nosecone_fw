@@ -30,6 +30,20 @@ enum states {STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_APOGEE, STATE_MAINEVE
 volatile uint32_t currentImuSeqNumber;
 volatile uint32_t currentBaroSeqNumber;
 
+extern IMU_data IMU_buffer[];
+extern BARO_data BARO_buffer[];
+
+
+static inline IMU_data* getCurrentIMU_data ()
+{
+  return &IMU_buffer[currentImuSeqNumber % CIRC_BUFFER_SIZE];
+}
+
+static inline BARO_data* getCurrentBARO_data ()
+{
+  return &BARO_buffer[currentBaroSeqNumber % CIRC_BUFFER_SIZE];
+}
+
 static inline void uint8ToFloat (uint8_t* uint8Ptr, float* floatPtr)
 {
   uint8_t* floatAsUintPtr = (uint8_t*) floatPtr;
@@ -45,7 +59,7 @@ static inline int32_t mod (int32_t x, int32_t n)
   return r < 0 ? r + n : r;
 }
 
-//TODO: use a timer with a smaller period
+//TODO: use a timer with a bigger period
 static inline void delayUs (uint32_t delay)
 {
   uint32_t start = __HAL_TIM_GET_COUNTER(&htim7);

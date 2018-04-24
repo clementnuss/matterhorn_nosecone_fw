@@ -46,7 +46,7 @@ void TK_data (void const * args)
             }
         }
 
-      osDelay (40);
+      osDelay (15);
     }
 }
 
