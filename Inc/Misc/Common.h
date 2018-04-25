@@ -14,6 +14,8 @@
 #define CIRC_BUFFER_SIZE 8
 #define CCMRAM __attribute__((section(".ccmram")))
 
+#define SIMULATION 1 // 0 production mode, 1 simulation mode
+
 extern TIM_HandleTypeDef htim7;
 
 /*

@@ -36,7 +36,12 @@ delete('SimData.h');
 % open file
 headerId = fopen('SimData.h', 'w');
 % write header data
-fprintf(headerId, 'float32_t SimData = {\n');
+fprintf(headerId, ['#define SIM_TAB_HEIGHT ' num2str(height(dataArray)) '\n']);
+fprintf(headerId, ['#define SIM_TAB_WIDTH ' num2str(3) '\n']);
+fprintf(headerId, '#define SIM_TIMESTAMP 0\n');
+fprintf(headerId, '#define SIM_ALTITUDE 1\n');
+fprintf(headerId, '#define SIM_ACCELX 2\n');
+fprintf(headerId, ['const float32_t SimData[' num2str(height(dataArray)) '][' num2str(3) '] = {\n']);
 
 % populate Array
 for i = 1:height(dataArray)

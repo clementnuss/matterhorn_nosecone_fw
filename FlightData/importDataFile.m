@@ -96,7 +96,7 @@ rawStringColumns(idx, 1) = "";
 %% Create output variable
 data = table;
 data.seqNumber = cell2mat(rawNumericColumns(:, 1));
-data.timestamp = cell2mat(rawNumericColumns(:, 2));
+data.timestamp = ceil(cell2mat(rawNumericColumns(:, 2))/1000);
 data.altitude = cell2mat(rawNumericColumns(:, 3));
 data.airSpeed = categorical(rawStringColumns(:, 1));
 data.pressure = cell2mat(rawNumericColumns(:, 4));
