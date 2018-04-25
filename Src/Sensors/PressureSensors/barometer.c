@@ -93,7 +93,7 @@ TK_fetchBarometer ()
 
   for (;;)
     {
-      if ((sensorCounter < SIM_TAB_HEIGHT)
+      if ((sensorCounter < SIM_TAB_HEIGHT-1)
 	  && ((HAL_GetTick ()
 		  - (SimData[sensorCounter][SIM_TIMESTAMP] - initial_sim_time)) > 0))
 	{
@@ -102,14 +102,14 @@ TK_fetchBarometer ()
 	  BARO_data* newBaroData = &BARO_buffer[(currentBaroSeqNumber + 1) % CIRC_BUFFER_SIZE];
 	  //populate data
 	  newBaroData->temperature = 0;
-	  newBaroData->pressure = 0;
+	  newBaroData->pressure = SimData[sensorCounter][SIM_PRESSURE];
 	  newBaroData->altitude = SimData[sensorCounter][SIM_ALTITUDE];
 
 	  //increment counters
 	  currentBaroSeqNumber++;
 	  sensorCounter++;
 	}
-      osDelay (1);
+      osDelay (SimData[sensorCounter][SIM_TIMESTAMP]-SimData[sensorCounter-1][SIM_TIMESTAMP]-1);
     }
 
 #endif

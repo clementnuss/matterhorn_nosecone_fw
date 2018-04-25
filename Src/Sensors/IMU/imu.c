@@ -96,7 +96,7 @@ TK_IMU (void const * argument)
 
   for (;;)
     {
-      if ((sensorCounter < SIM_TAB_HEIGHT)
+      if ((sensorCounter < SIM_TAB_HEIGHT-1)
 	  && ((HAL_GetTick ()
 	      - (SimData[sensorCounter][SIM_TIMESTAMP] - initial_sim_time)) > 0))
 	{
@@ -117,7 +117,7 @@ TK_IMU (void const * argument)
 	  currentImuSeqNumber++;
 	  sensorCounter++;
 	}
-      osDelay (1);
+      osDelay (SimData[sensorCounter][SIM_TIMESTAMP]-SimData[sensorCounter-1][SIM_TIMESTAMP]-1);
     }
 #endif
 

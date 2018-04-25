@@ -111,8 +111,9 @@ void TK_state_machine (void const * argument)
 
         case STATE_LIFTOFF:
           {
+            uint32_t currentTime = HAL_GetTick ();
             // determine motor burn-out based on lift-off detection
-            if ((HAL_GetTick () - time_tmp) > ROCKET_CST_MOTOR_BURNTIME)
+            if ((currentTime - time_tmp) > ROCKET_CST_MOTOR_BURNTIME)
               {
                 currentState = STATE_COAST; // switch to coast state
               }
