@@ -1,9 +1,12 @@
+#ifndef INCLUDE_SIM_DATA_ 
+#define INCLUDE_SIM_DATA_ 
+
 #define SIM_TAB_HEIGHT 7575
 #define SIM_TAB_WIDTH 3
 #define SIM_TIMESTAMP 0
 #define SIM_ALTITUDE 1
 #define SIM_ACCELX 2
-const float32_t SimData[7575][3] = {
+static const float32_t SimData[7575][3] = {
 { 1610969, 424.055, 1.0154 },
 { 1610983, 424.1863, 1.0134 },
 { 1610994, 424.1863, 1.0156 },
@@ -7580,3 +7583,4 @@ const float32_t SimData[7575][3] = {
 { 1748962, 422.8528, 0.093 },
 { 1748974, 422.7377, 0.094 },
 };
+#endif

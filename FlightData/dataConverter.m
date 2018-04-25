@@ -36,12 +36,14 @@ delete('SimData.h');
 % open file
 headerId = fopen('SimData.h', 'w');
 % write header data
+fprintf(headerId, '#ifndef INCLUDE_SIM_DATA_ \n');
+fprintf(headerId, '#define INCLUDE_SIM_DATA_ \n\n');
 fprintf(headerId, ['#define SIM_TAB_HEIGHT ' num2str(height(dataArray)) '\n']);
 fprintf(headerId, ['#define SIM_TAB_WIDTH ' num2str(3) '\n']);
 fprintf(headerId, '#define SIM_TIMESTAMP 0\n');
 fprintf(headerId, '#define SIM_ALTITUDE 1\n');
 fprintf(headerId, '#define SIM_ACCELX 2\n');
-fprintf(headerId, ['const float32_t SimData[' num2str(height(dataArray)) '][' num2str(3) '] = {\n']);
+fprintf(headerId, ['static const float32_t SimData[' num2str(height(dataArray)) '][' num2str(3) '] = {\n']);
 
 % populate Array
 for i = 1:height(dataArray)
@@ -49,5 +51,18 @@ for i = 1:height(dataArray)
 end
 
 fprintf(headerId, '};\n');
+fprintf(headerId, '#endif');
 
 fclose(headerId);
+
+%% ------------------------------------------------------------------------
+% Plot Data
+% ------------------------------------------------------------------------
+
+figure; hold on;
+title 'Altitude'
+plot(([dataArray.timestamp]-dataArray.timestamp(1))/1000, [dataArray.altitude]);
+
+figure; hold on;
+title 'Acceleration'
+plot(([dataArray.timestamp]-dataArray.timestamp(1))/1000, [dataArray.accelx]);

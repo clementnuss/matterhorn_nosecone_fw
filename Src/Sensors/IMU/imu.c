@@ -77,9 +77,8 @@ TK_IMU (void const * argument)
 
 #if(SIMULATION == 1)
   // Save initialization time to synchronize program clock with data
-  float32_t initial_sim_time = SimData[0][SIM_TIMESTAMP] - HAL_GetTick();
+  float32_t initial_sim_time = SimData[0][SIM_TIMESTAMP] - HAL_GetTick ();
   uint32_t sensorCounter = 0;
-
 
   IMU_data* newImuDataSet = &IMU_buffer[(currentImuSeqNumber + 1)
       % CIRC_BUFFER_SIZE];
@@ -87,6 +86,10 @@ TK_IMU (void const * argument)
   newImuDataSet->acceleration.x = SimData[sensorCounter][SIM_ACCELX];
   newImuDataSet->acceleration.y = 0;
   newImuDataSet->acceleration.z = 0;
+  newImuDataSet->eulerAngles.x = 0;
+  newImuDataSet->eulerAngles.y = 0;
+  newImuDataSet->eulerAngles.z = 0;
+  newImuDataSet->temperatureC = 0;
 
   currentImuSeqNumber++;
   sensorCounter++;
@@ -105,12 +108,16 @@ TK_IMU (void const * argument)
 	  newImuDataSet->acceleration.x = SimData[sensorCounter][SIM_ACCELX];
 	  newImuDataSet->acceleration.y = 0;
 	  newImuDataSet->acceleration.z = 0;
+	  newImuDataSet->eulerAngles.x = 0;
+	  newImuDataSet->eulerAngles.y = 0;
+	  newImuDataSet->eulerAngles.z = 0;
+	  newImuDataSet->temperatureC = 0;
 
 	  //increment counters
 	  currentImuSeqNumber++;
 	  sensorCounter++;
 	}
-      osDelay(1);
+      osDelay (1);
     }
 #endif
 

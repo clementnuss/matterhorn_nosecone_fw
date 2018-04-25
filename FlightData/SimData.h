@@ -1,3 +1,6 @@
+#ifndef INCLUDE_SIM_DATA_ 
+#define INCLUDE_SIM_DATA_ 
+
 #define SIM_TAB_HEIGHT 7575
 #define SIM_TAB_WIDTH 3
 #define SIM_TIMESTAMP 0
@@ -7580,3 +7583,4 @@ const float32_t SimData[7575][3] = {
 { 1748962, 422.8528, 0.093 },
 { 1748974, 422.7377, 0.094 },
 };
+#endif
