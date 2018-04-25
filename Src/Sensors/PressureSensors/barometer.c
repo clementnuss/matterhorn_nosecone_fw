@@ -14,6 +14,8 @@
 #include "stm32f4xx_hal.h"
 #include "Misc/Common.h"
 
+#include <Misc/rocket_constants.h>
+
 extern I2C_HandleTypeDef hi2c2;
 I2C_HandleTypeDef* hi2c;
 extern osSemaphoreId pressureSensorI2cSemHandle;
@@ -165,7 +167,7 @@ osStatus processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
   int32_t p = ((int64_t) d1 * sens / (1LL << 21) - off) / (1LL << 15);
   ret->pressure = (float32_t) p / 100.0; //pressure in mbar (=hPa)
 
-
+  ret->altitude = altitudeFromPressure(ret->pressure);
 
   if ((ret->temperature > MAX_TEMPERATURE) | (ret->temperature < MIN_TEMPERATURE) | (ret->pressure > MAX_PRESSURE)
       | (ret->pressure < MIN_PRESSURE))
@@ -178,6 +180,11 @@ osStatus processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
       return osOK;
     }
 
+}
+
+inline float altitudeFromPressure (float pressure_hPa)
+{
+  return 44330 * (1.0 - pow (pressure_hPa / ADJUSTED_SEA_LEVEL_PRESSURE, 0.1903));
 }
 
 osStatus i2cReceive (uint8_t* rxBuffer, uint16_t size)

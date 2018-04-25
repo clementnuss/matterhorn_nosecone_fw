@@ -30,7 +30,7 @@ enum DECODING_STATE
   PARSING_PREAMBLE, PARSING_PACKET, PARSING_CHECKSUM
 };
 
-uint8_t currentState = PARSING_PREAMBLE;
+uint8_t currentRxState = PARSING_PREAMBLE;
 
 void TK_xBee_receive (const void* args)
 {
@@ -62,7 +62,7 @@ void HAL_UART_RxCpltCallback (UART_HandleTypeDef *huart)
 
 void resetStateMachine ()
 {
-  currentState = PARSING_PREAMBLE;
+  currentRxState = PARSING_PREAMBLE;
   preambleCnt = 0;
   packetCnt = 0;
   currentChecksum = 0;
@@ -89,7 +89,7 @@ void processReceivedPacket ()
 
 inline void processReceivedByte (uint8_t rxByte)
 {
-  switch (currentState)
+  switch (currentRxState)
     {
     case PARSING_PREAMBLE:
       {
@@ -97,7 +97,7 @@ inline void processReceivedByte (uint8_t rxByte)
           {
             if (++preambleCnt == 4)
               {
-                currentState = PARSING_PACKET;
+                currentRxState = PARSING_PACKET;
               }
           }
         else
@@ -112,7 +112,7 @@ inline void processReceivedByte (uint8_t rxByte)
         currentChecksum += rxByte;
         if (packetCnt == RX_PACKET_SIZE)
           {
-            currentState = PARSING_CHECKSUM;
+            currentRxState = PARSING_CHECKSUM;
           }
         break;
       }

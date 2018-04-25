@@ -20,7 +20,12 @@ extern TIM_HandleTypeDef htim7;
  * States decleration
  */
 
-enum states {STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_APOGEE, STATE_MAINEVENT} currentState;
+typedef enum states
+{
+  STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_PRIMARY, STATE_SECONDARY, STATE_TOUCHDOWN
+};
+
+volatile enum states currentState;
 
 /*
  * heap file, line 104, declare the RTOS heap in CCMRAM
@@ -32,7 +37,6 @@ volatile uint32_t currentBaroSeqNumber;
 
 extern IMU_data IMU_buffer[];
 extern BARO_data BARO_buffer[];
-
 
 static inline IMU_data* getCurrentIMU_data ()
 {
@@ -76,5 +80,10 @@ static inline void floatToUint8 (uint8_t* uint8Ptr, float* floatPtr)
   uint8Ptr[1] = floatAsUintPtr[2];
   uint8Ptr[2] = floatAsUintPtr[1];
   uint8Ptr[3] = floatAsUintPtr[0];
+}
+
+static inline float32_t abs_fl32(float32_t v)
+{
+  return (v >= 0) ? v : -v;
 }
 #endif /* INCLUDE_COMMON_H_ */
