@@ -6,7 +6,8 @@
  */
 
 #include "stm32f4xx_hal.h"
-#include "imu.h"
+#include <Sensors/imu.h>
+
 #if(SIMULATION == 1)
 #include <Misc/SimData.h>
 #endif
@@ -71,11 +72,18 @@ uint8_t rxBuffer[TSS_COMM_BUFFER_SIZE];
  * reset TSS when impossible to communicate
  */
 
+extern int startSimulation;
+
 void
 TK_IMU (void const * argument)
 {
 
 #if(SIMULATION == 1)
+
+  while (!startSimulation) {
+      osDelay(10);
+  }
+
   // Save initialization time to synchronize program clock with data
   float32_t initial_sim_time = SimData[0][SIM_TIMESTAMP] - HAL_GetTick ();
   uint32_t sensorCounter = 0;

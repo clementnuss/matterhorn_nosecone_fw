@@ -9,7 +9,7 @@
  * Code based on this library: https://github.com/freetronics/BaroSensor/blob/master/BaroSensor.cpp
  */
 
-#include "barometer.h"
+#include <Sensors/barometer.h>
 
 #include "stm32f4xx_hal.h"
 #include "Misc/Common.h"
@@ -47,8 +47,7 @@ uint8_t rxBuffer[5];
 #define CMD_START_D2(oversample_level) (0x50 + 2*(int)oversample_level)
 #define CMD_READ_ADC 0x00
 
-void
-initBarometer ()
+void initBarometer ()
 {
   hi2c = &hi2c2;
 
@@ -74,10 +73,17 @@ initBarometer ()
 
 uint32_t failedReading = 0;
 
-void
-TK_fetchBarometer ()
+extern int startSimulation;
+
+void TK_fetchBarometer ()
 {
 #if(SIMULATION == 1)
+
+  while (!startSimulation)
+    {
+      osDelay (10);
+    }
+
   // Save initialization time to synchronize program clock with data
   float32_t initial_sim_time = SimData[0][SIM_TIMESTAMP] - HAL_GetTick ();
   uint32_t sensorCounter = 0;
@@ -93,23 +99,22 @@ TK_fetchBarometer ()
 
   for (;;)
     {
-      if ((sensorCounter < SIM_TAB_HEIGHT-1)
-	  && ((HAL_GetTick ()
-		  - (SimData[sensorCounter][SIM_TIMESTAMP] - initial_sim_time)) > 0))
-	{
-	  // change sensor data
-	  // create artificial sensor structure
-	  BARO_data* newBaroData = &BARO_buffer[(currentBaroSeqNumber + 1) % CIRC_BUFFER_SIZE];
-	  //populate data
-	  newBaroData->temperature = 0;
-	  newBaroData->pressure = SimData[sensorCounter][SIM_PRESSURE];
-	  newBaroData->altitude = SimData[sensorCounter][SIM_ALTITUDE];
+      if ((sensorCounter < SIM_TAB_HEIGHT - 1)
+          && ((HAL_GetTick () - (SimData[sensorCounter][SIM_TIMESTAMP] - initial_sim_time)) > 0))
+        {
+          // change sensor data
+          // create artificial sensor structure
+          BARO_data* newBaroData = &BARO_buffer[(currentBaroSeqNumber + 1) % CIRC_BUFFER_SIZE];
+          //populate data
+          newBaroData->temperature = 0;
+          newBaroData->pressure = SimData[sensorCounter][SIM_PRESSURE];
+          newBaroData->altitude = SimData[sensorCounter][SIM_ALTITUDE];
 
-	  //increment counters
-	  currentBaroSeqNumber++;
-	  sensorCounter++;
-	}
-      osDelay (SimData[sensorCounter][SIM_TIMESTAMP]-SimData[sensorCounter-1][SIM_TIMESTAMP]-1);
+          //increment counters
+          currentBaroSeqNumber++;
+          sensorCounter++;
+        }
+      osDelay (SimData[sensorCounter][SIM_TIMESTAMP] - SimData[sensorCounter - 1][SIM_TIMESTAMP] - 1);
     }
 
 #endif
@@ -128,10 +133,10 @@ TK_fetchBarometer ()
       //TODO: parse one of the pitot while barometer takes measure
 
       if ((elapsed = (HAL_GetTick () - samplingStart))
-	  < SamplingDelayMs[BAROMETER_OSR])
-	{
-	  osDelay (SamplingDelayMs[BAROMETER_OSR] - elapsed);
-	}
+          < SamplingDelayMs[BAROMETER_OSR])
+        {
+          osDelay (SamplingDelayMs[BAROMETER_OSR] - elapsed);
+        }
 
       i2cTransmitCommand (CMD_READ_ADC);
       delayUs (10);
@@ -141,10 +146,10 @@ TK_fetchBarometer ()
       i2cTransmitCommand (CMD_START_D1(BAROMETER_OSR));
       samplingStart = HAL_GetTick ();
       if ((elapsed = (HAL_GetTick () - samplingStart))
-	  < SamplingDelayMs[BAROMETER_OSR])
-	{
-	  osDelay (SamplingDelayMs[BAROMETER_OSR] - elapsed);
-	}
+          < SamplingDelayMs[BAROMETER_OSR])
+        {
+          osDelay (SamplingDelayMs[BAROMETER_OSR] - elapsed);
+        }
 
       i2cTransmitCommand (CMD_READ_ADC);
       delayUs (10);
@@ -152,24 +157,23 @@ TK_fetchBarometer ()
       uint32_t d1 = rxBuffer[0] << 16 | rxBuffer[1] << 8 | rxBuffer[2];
 
       BARO_data* newBaroData = &BARO_buffer[(currentBaroSeqNumber + 1)
-	  % CIRC_BUFFER_SIZE];
+      % CIRC_BUFFER_SIZE];
       if (processD1D2 (d1, d2, newBaroData) == osOK)
-	{
-	  currentBaroSeqNumber++;
-	}
+        {
+          currentBaroSeqNumber++;
+        }
       else
-	{
-	  failedReading++;
-	  //TODO: reset the barometer
-	}
+        {
+          failedReading++;
+          //TODO: reset the barometer
+        }
 
     }
 
 #endif
 }
 
-osStatus
-processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
+osStatus processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
 {
   int64_t dt = d2 - PROM_DATA[5] * (1L << 8);
   int32_t temp = 2000 + (dt * PROM_DATA[6]) / (1L << 23);
@@ -201,13 +205,13 @@ processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
       int32_t off2 = 61 * tx / (1 << 4);
       int32_t sens2 = 29 * tx / (1 << 4);
       if (temp < -1500)
-	{
-	  /* Very low temperature */
-	  tx = temp + 1500;
-	  tx *= tx;
-	  off2 += 17 * tx;
-	  sens2 += 9 * tx;
-	}
+        {
+          /* Very low temperature */
+          tx = temp + 1500;
+          tx *= tx;
+          off2 += 17 * tx;
+          sens2 += 9 * tx;
+        }
       off -= off2;
       sens -= sens2;
     }
@@ -217,8 +221,7 @@ processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
 
   ret->altitude = altitudeFromPressure (ret->pressure);
 
-  if ((ret->temperature > MAX_TEMPERATURE)
-      | (ret->temperature < MIN_TEMPERATURE) | (ret->pressure > MAX_PRESSURE)
+  if ((ret->temperature > MAX_TEMPERATURE) | (ret->temperature < MIN_TEMPERATURE) | (ret->pressure > MAX_PRESSURE)
       | (ret->pressure < MIN_PRESSURE))
     {
       return osErrorOS;
@@ -231,52 +234,43 @@ processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
 
 }
 
-inline float
-altitudeFromPressure (float pressure_hPa)
+inline float altitudeFromPressure (float pressure_hPa)
 {
-  return 44330
-      * (1.0 - pow (pressure_hPa / ADJUSTED_SEA_LEVEL_PRESSURE, 0.1903));
+  return 44330 * (1.0 - pow (pressure_hPa / ADJUSTED_SEA_LEVEL_PRESSURE, 0.1903));
 }
 
-osStatus
-i2cReceive (uint8_t* rxBuffer, uint16_t size)
+osStatus i2cReceive (uint8_t* rxBuffer, uint16_t size)
 {
   HAL_I2C_Master_Receive_DMA (hi2c, BAROMETER_ADDR, rxBuffer, size);
   return osSemaphoreWait (pressureSensorI2cSemHandle, I2C_TIMEOUT);
 }
-osStatus
-i2cTransmitCommand (uint8_t command)
+osStatus i2cTransmitCommand (uint8_t command)
 {
   HAL_I2C_Master_Transmit_DMA (hi2c, BAROMETER_ADDR, &command, 1);
   return osSemaphoreWait (pressureSensorI2cSemHandle, I2C_TIMEOUT);
 }
 
-void
-HAL_I2C_MasterTxCpltCallback (I2C_HandleTypeDef *hi2c)
+void HAL_I2C_MasterTxCpltCallback (I2C_HandleTypeDef *hi2c)
 {
   osSemaphoreRelease (pressureSensorI2cSemHandle);
 }
 
-void
-HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
+void HAL_I2C_MasterRxCpltCallback (I2C_HandleTypeDef *hi2c)
 {
   osSemaphoreRelease (pressureSensorI2cSemHandle);
 }
 
-void
-HAL_I2C_ErrorCallback (I2C_HandleTypeDef *hi2c)
+void HAL_I2C_ErrorCallback (I2C_HandleTypeDef *hi2c)
 {
 //  osSemaphoreRelease (pressureSensorI2cSemHandle);
 }
 
-void
-HAL_I2C_AbortCpltCallback (I2C_HandleTypeDef *hi2c)
+void HAL_I2C_AbortCpltCallback (I2C_HandleTypeDef *hi2c)
 {
   //osSemaphoreRelease (pressureSensorI2cSemHandle);
 }
 
-void
-testAbsPressure ()
+void testAbsPressure ()
 {
   uint8_t diff[6];
   for (int i = 0; i < 15; i++)

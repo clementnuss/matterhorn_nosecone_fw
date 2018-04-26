@@ -8,17 +8,16 @@
 #include "stm32f4xx_hal.h"
 #include "Misc/Common.h"
 
-#ifdef NOSECONE
+#ifdef CENTRALBODY
 
-#include "xbee.h"
-#include <Misc/lower_stage_iface.h>
+#include <Misc/physical_iface.h>
 
-extern UART_HandleTypeDef* xBee_huart;
+extern UART_HandleTypeDef* nose_huart;
 
 #define XBEE_RX_BUFFER_SIZE 512
 
 #define PREAMBLE_FLAG 0x55
-#define RX_PACKET_SIZE 8
+#define RX_PACKET_SIZE 1
 
 uint8_t rxPacketBuffer[RX_PACKET_SIZE];
 
@@ -27,6 +26,8 @@ uint8_t rxBuffer[XBEE_RX_BUFFER_SIZE];
 
 uint32_t preambleCnt, packetCnt, currentChecksum;
 
+extern int startSimulation;
+
 enum DECODING_STATE
 {
   PARSING_PREAMBLE, PARSING_PACKET, PARSING_CHECKSUM
@@ -34,14 +35,14 @@ enum DECODING_STATE
 
 uint8_t currentRxState = PARSING_PREAMBLE;
 
-void TK_xBee_receive (const void* args)
+void TK_nose_communication (const void* args)
 {
 
-  HAL_UART_Receive_DMA (xBee_huart, rxBuffer, XBEE_RX_BUFFER_SIZE);
+  HAL_UART_Receive_DMA (nose_huart, rxBuffer, XBEE_RX_BUFFER_SIZE);
 
   for (;;)
     {
-      endDmaStreamIndex = XBEE_RX_BUFFER_SIZE - xBee_huart->hdmarx->Instance->NDTR;
+      endDmaStreamIndex = XBEE_RX_BUFFER_SIZE - nose_huart->hdmarx->Instance->NDTR;
       while (lastDmaStreamIndex < endDmaStreamIndex)
         {
           processReceivedByte (rxBuffer[lastDmaStreamIndex++]);
@@ -73,16 +74,19 @@ void resetStateMachine ()
 void processReceivedPacket ()
 {
 
+  longBip ();
+  osDelay (1000);
+  startSimulation = 1;
+
   switch (rxPacketBuffer[0])
     {
     case 0x14:
       {
-        triggerFirstEvent ();
+
         break;
       }
     case 0x22:
       {
-        triggerSecondEvent ();
         break;
       }
     }
@@ -97,7 +101,7 @@ inline void processReceivedByte (uint8_t rxByte)
       {
         if (rxByte == PREAMBLE_FLAG)
           {
-            if (++preambleCnt == 4)
+            if (++preambleCnt == 2)
               {
                 currentRxState = PARSING_PACKET;
               }
@@ -112,6 +116,10 @@ inline void processReceivedByte (uint8_t rxByte)
       {
         rxPacketBuffer[packetCnt++] = rxByte;
         currentChecksum += rxByte;
+
+        longBip ();
+        osDelay (1000);
+        startSimulation = 1;
         if (packetCnt == RX_PACKET_SIZE)
           {
             currentRxState = PARSING_CHECKSUM;

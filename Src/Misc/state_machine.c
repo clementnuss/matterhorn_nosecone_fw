@@ -5,9 +5,12 @@
  *      Author: ebrunner
  */
 
-#include "stm32f4xx_hal.h"
-#include "Misc/Common.h"
-#include "Misc/rocket_constants.h"
+#include <cmsis_os.h>
+#include <stm32f4xx_hal.h>
+
+#include <Misc/Common.h>
+#include <Misc/rocket_constants.h>
+#include <Misc/physical_iface.h>
 
 // Apogee measurements delay
 #define APOGEE_BUFFER_SIZE 5 // Number of descending altitude events before the apogee detection is triggered
@@ -21,7 +24,7 @@
 void TK_state_machine (void const * argument)
 {
 
-  osDelay(1000);
+  osDelay (1000);
 
   // Declare time variable
   uint32_t time_tmp = 0;
@@ -84,7 +87,7 @@ void TK_state_machine (void const * argument)
         }
       else
         {
-         baroIsReady = 0; // set new data flag to false
+          baroIsReady = 0; // set new data flag to false
         }
 
       // State Machine
@@ -101,10 +104,13 @@ void TK_state_machine (void const * argument)
                 // detect lift-off
                 if (liftoffAccelTrig)
                   {
-                    currentState = STATE_LIFTOFF; // Switch to lift-off state
                     time_tmp = HAL_GetTick (); // Start timer to estimate motor burn out
+                    currentState = STATE_LIFTOFF; // Switch to lift-off state
 
-                    // TODO: Set package data rate to High
+#ifdef CENTRALBODY
+                    shortBip ();
+#endif
+
                   }
               }
             break;
@@ -117,6 +123,9 @@ void TK_state_machine (void const * argument)
             if ((currentTime - time_tmp) > ROCKET_CST_MOTOR_BURNTIME)
               {
                 currentState = STATE_COAST; // switch to coast state
+#ifdef CENTRALBODY
+                    shortBip ();
+#endif
               }
             break;
           }
@@ -161,12 +170,15 @@ void TK_state_machine (void const * argument)
                 // detect apogee
                 if (minAltTrig && counterAltTrig && diffAltTrig)
                   {
-                    currentState = STATE_PRIMARY; // switch to primary descent phase
                     time_tmp = HAL_GetTick (); // save time to mute sensors while ejection occures
+                    currentState = STATE_PRIMARY; // switch to primary descent phase
+
+#ifdef CENTRALBODY
+                    longBip ();
+                    triggerFirstEvent (); // Trigger ejection charges
+#endif
 
                     //TODO: Close Airbrakes
-                    //TODO: Trigger ejection charges
-
                   }
               }
             break;
@@ -181,7 +193,7 @@ void TK_state_machine (void const * argument)
                 uint8_t counterSecTrig = 0;
 
                 // update the minimum altitude detected up to this point
-                if ((baro_data->altitude - calib_initial_altitude)> ROCKET_CST_REC_SECONDARY_ALT)
+                if ((baro_data->altitude - calib_initial_altitude) > ROCKET_CST_REC_SECONDARY_ALT)
                   {
                     // As long as the measured altitude is above the secondary recovery event altitude, keep buffer counter to 0
                     sec_counter = 0;
@@ -200,11 +212,15 @@ void TK_state_machine (void const * argument)
                 //detect secondary recovery event
                 if (sensorMuteTimeTrig && counterSecTrig)
                   {
-                    currentState = STATE_SECONDARY; // switch to secondary recovery phase
                     time_tmp = HAL_GetTick (); // save current time to start differed touchdown detection rate
+                    currentState = STATE_SECONDARY; // switch to secondary recovery phase
                     td_last_alt = baro_data->altitude; // save altitude measurement for touchdown detection
 
-                    // TODO: Trigger unreefing
+#ifdef CENTRALBODY
+                    longBip ();
+                    triggerSecondEvent (); // Trigger ejection charges
+#endif
+
                   }
               }
             break;
@@ -243,7 +259,9 @@ void TK_state_machine (void const * argument)
                     if (counterTdTrig)
                       {
                         currentState = STATE_TOUCHDOWN;
-
+#ifdef CENTRALBODY
+                        shortBip ();
+#endif
                         // TODO: Set telemetry data rate to low
                       }
                   }

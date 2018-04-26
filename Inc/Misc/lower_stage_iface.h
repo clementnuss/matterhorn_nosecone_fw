@@ -8,8 +8,8 @@
 #ifndef MISC_LOWER_STAGE_IFACE_H_
 #define MISC_LOWER_STAGE_IFACE_H_
 
-void triggerFirstEvent ();
+void transmitFirstEvent ();
 
-void triggerSecondEvent ();
+void transmitSecondEvent ();
 
 #endif /* MISC_LOWER_STAGE_IFACE_H_ */

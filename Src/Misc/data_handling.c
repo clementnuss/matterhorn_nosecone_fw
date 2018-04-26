@@ -8,6 +8,9 @@
 #include "cmsis_os.h"
 
 #include "Misc/Common.h"
+
+#ifdef NOSECONE
+
 #include <Misc/data_handling.h>
 #include "Telemetry/telemetry_protocol.h"
 #include "Telemetry/simpleCRC.h"
@@ -134,3 +137,5 @@ inline void write32u (uint32_t v)
   *(uint32_t*) (currDatagramPtr + currPos) = __bswap32(v);
   currPos += 4;
 }
+
+#endif
