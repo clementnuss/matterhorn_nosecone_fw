@@ -5,10 +5,12 @@
  *      Author: Clément Nussbaumer
  */
 
-#include "xbee.h"
 
 #include "stm32f4xx_hal.h"
 #include "Misc/Common.h"
+
+#ifdef NOSECONE
+#include <Telemetry/xbee.h>
 
 extern osMessageQId xBeeQueueHandle;
 osSemaphoreId xBeeTxBufferSemHandle;
@@ -179,3 +181,5 @@ inline uint8_t escapedCharacter (uint8_t byte)
       return 0x00;
     }
 }
+
+#endif

@@ -8,6 +8,8 @@
 #include "stm32f4xx_hal.h"
 #include "Misc/Common.h"
 
+#ifdef NOSECONE
+
 #include "xbee.h"
 #include <Misc/lower_stage_iface.h>
 
@@ -128,3 +130,4 @@ inline void processReceivedByte (uint8_t rxByte)
     }
 }
 
+#endif

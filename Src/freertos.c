@@ -58,6 +58,8 @@
 
 /* USER CODE BEGIN Variables */
 volatile unsigned long ulHighFrequencyTimerTicks = 0;
+uint8_t ucHeap[configTOTAL_HEAP_SIZE];
+
 /* USER CODE END Variables */
 
 /* Function prototypes -------------------------------------------------------*/

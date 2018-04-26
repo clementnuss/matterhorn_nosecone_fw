@@ -15,8 +15,12 @@
 #define CCMRAM __attribute__((section(".ccmram")))
 
 #define SIMULATION 1 // 0 production mode, 1 simulation mode
-#define NOSECONE
+// #define NOSECONE
 #define CENTRALBODY
+
+#if defined(NOSECONE) && defined(CENTRALBODY)
+#error CENTRALBODY and NOSECONE cannot be both defined
+#endif
 
 extern TIM_HandleTypeDef htim7;
 
@@ -24,17 +28,12 @@ extern TIM_HandleTypeDef htim7;
  * States decleration
  */
 
-typedef enum states
+enum states
 {
   STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_PRIMARY, STATE_SECONDARY, STATE_TOUCHDOWN
 };
 
 volatile enum states currentState;
-
-/*
- * heap file, line 104, declare the RTOS heap in CCMRAM
- * static uint8_t ucHeap[ configTOTAL_HEAP_SIZE ] __attribute__((section(".ccmram")));
- */
 
 volatile uint32_t currentImuSeqNumber;
 volatile uint32_t currentBaroSeqNumber;
@@ -86,7 +85,7 @@ static inline void floatToUint8 (uint8_t* uint8Ptr, float* floatPtr)
   uint8Ptr[3] = floatAsUintPtr[0];
 }
 
-static inline float32_t abs_fl32(float32_t v)
+static inline float32_t abs_fl32 (float32_t v)
 {
   return (v >= 0) ? v : -v;
 }
