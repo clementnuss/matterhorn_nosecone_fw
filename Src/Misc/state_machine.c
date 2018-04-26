@@ -15,7 +15,7 @@
 #define APOGEE_MUTE_TIME 5000 // sensor mute time in ms such that the over-pressure of ejection doesn't trigger a state by accident
 #define SECONDARY_BUFFER_SIZE 5 // Number of descending altitude events before the secondary recovery altitude detection is triggered
 #define TOUCHDOWN_DELAY_TIME 5000 // delay time in ms between two evaluations of the touch-down event
-#define TOUCHDOWN_ALT_DIFF 1 // touch-down altitude offset in which the rocket is considered as static
+#define TOUCHDOWN_ALT_DIFF 2 // touch-down altitude offset in which the rocket is considered as static
 #define TOUCHDOWN_BUFFER_SIZE 5 // Number of static altitude events before the touch-down detection is triggered
 
 void TK_state_machine (void const * argument)
@@ -34,6 +34,7 @@ void TK_state_machine (void const * argument)
 
   // Initial calibration commands
   baro_data = getCurrentBARO_data ();
+  // TODO: Do different calibration method that is more robust
   calib_initial_altitude = baro_data->altitude;
 
   // Declare apogee detection variables
