@@ -24,6 +24,7 @@ STM32F405VGTx_FLASH.ld
 *LOCAL*
 *REMOTE*
 *.osx.project
+*.bak
 _FLASH.ld
 
 # MATLAB

@@ -74,6 +74,7 @@ DMA_HandleTypeDef hdma_spi1_tx;
 TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
@@ -84,6 +85,7 @@ osThreadId fetchFBarometerHandle;
 osThreadId state_machineHandle;
 osThreadId noseCommHandle;
 osThreadId physical_ifaceHandle;
+osThreadId ab_controllerHandle;
 osSemaphoreId IMU_IntSemHandle;
 osSemaphoreId xBeeTxBufferSemHandle;
 osSemaphoreId pressureSensorI2cSemHandle;
@@ -97,6 +99,7 @@ IMU_data IMU_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 BARO_data BARO_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 
 UART_HandleTypeDef* nose_huart;
+UART_HandleTypeDef* airbrake_huart;
 
 /* USER CODE END PV */
 
@@ -109,12 +112,14 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_USART2_UART_Init(void);
 void StartDefaultTask(void const * argument);
 extern void TK_IMU(void const * argument);
 extern void TK_fetchBarometer(void const * argument);
 extern void TK_state_machine(void const * argument);
 extern void TK_nose_communication(void const * argument);
 extern void TK_physical_iface(void const * argument);
+extern void TK_ab_controller(void const * argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -163,6 +168,7 @@ int main(void)
   MX_TIM7_Init();
   MX_I2C2_Init();
   MX_USART3_UART_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT (&htim7);
   HAL_GPIO_WritePin (GPS_ENn_GPIO_Port, GPS_ENn_Pin, GPIO_PIN_RESET);
@@ -222,6 +228,10 @@ int main(void)
   /* definition and creation of physical_iface */
   osThreadDef(physical_iface, TK_physical_iface, osPriorityHigh, 0, 128);
   physical_ifaceHandle = osThreadCreate(osThread(physical_iface), NULL);
+
+  /* definition and creation of ab_controller */
+  osThreadDef(ab_controller, TK_ab_controller, osPriorityNormal, 0, 128);
+  ab_controllerHandle = osThreadCreate(osThread(ab_controller), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -397,6 +407,25 @@ static void MX_USART1_UART_Init(void)
 
 }
 
+/* USART2 init function */
+static void MX_USART2_UART_Init(void)
+{
+
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
 /* USART3 init function */
 static void MX_USART3_UART_Init(void)
 {
@@ -539,9 +568,12 @@ static void MX_GPIO_Init(void)
 void
 initPeripherals ()
 {
+  // initiate nosecone serial communication
   nose_huart = &huart3;
   HAL_UART_Init (nose_huart);
-
+  // initiate airbrake serial communication
+  airbrake_huart = &huart2;
+  HAL_UART_Init (airbrake_huart);
 }
 
 /*
