@@ -30,7 +30,7 @@ extern TIM_HandleTypeDef htim7;
 
 enum states
 {
-  STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_PRIMARY, STATE_SECONDARY, STATE_TOUCHDOWN
+  STATE_CALIBRATION, STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_PRIMARY, STATE_SECONDARY, STATE_TOUCHDOWN
 };
 
 volatile enum states currentState;
@@ -89,4 +89,18 @@ static inline float32_t abs_fl32 (float32_t v)
 {
   return (v >= 0) ? v : -v;
 }
+
+static inline float32_t array_mean(float32_t* array, uint8_t arraySize)
+{
+  uint8_t i;
+  float32_t sum = 0.0;
+
+  for(i = 0 ; i < arraySize ; i++)
+    {
+      sum += array[i];
+    }
+
+  return sum/arraySize;
+}
+
 #endif /* INCLUDE_COMMON_H_ */

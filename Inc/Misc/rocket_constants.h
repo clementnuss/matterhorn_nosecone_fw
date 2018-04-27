@@ -29,8 +29,21 @@
 #define ROCKET_CST_REC_SECONDARY_ALT 100 // altitude of secondary recovery event [m]
 
 /*
+ * STATE MACHINE PARAMETERS
+ */
+
+#define APOGEE_BUFFER_SIZE 5 // Number of descending altitude events before the apogee detection is triggered
+#define APOGEE_ALT_DIFF 0 // meters below the apogee that allow the state to be triggered
+#define APOGEE_MUTE_TIME 5000 // sensor mute time in ms such that the over-pressure of ejection doesn't trigger a state by accident
+#define SECONDARY_BUFFER_SIZE 5 // Number of descending altitude events before the secondary recovery altitude detection is triggered
+#define TOUCHDOWN_DELAY_TIME 5000 // delay time in ms between two evaluations of the touch-down event
+#define TOUCHDOWN_ALT_DIFF 2 // touch-down altitude offset in which the rocket is considered as static
+#define TOUCHDOWN_BUFFER_SIZE 5 // Number of static altitude events before the touch-down detection is triggered
+
+/*
  * CALIBRATION DATA
  */
+#define CALIB_BARO_BUFFER_SIZE 50 // Number of measurement values taken by the calibration routine to evaluate intial altitude
 
 volatile float32_t calib_initial_altitude;
 
