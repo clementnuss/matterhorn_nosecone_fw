@@ -15,7 +15,7 @@
 #define CCMRAM __attribute__((section(".ccmram")))
 
 #define SIMULATION 1 // 0 production mode, 1 simulation mode
-// #define NOSECONE
+//#define NOSECONE
 #define CENTRALBODY
 
 #if defined(NOSECONE) && defined(CENTRALBODY)
@@ -33,7 +33,8 @@ enum states
   STATE_CALIBRATION, STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_PRIMARY, STATE_SECONDARY, STATE_TOUCHDOWN
 };
 
-volatile enum states currentState;
+uint8_t currentState;
+volatile uint32_t LIFTOFF_TIME;
 
 volatile uint32_t currentImuSeqNumber;
 volatile uint32_t currentBaroSeqNumber;

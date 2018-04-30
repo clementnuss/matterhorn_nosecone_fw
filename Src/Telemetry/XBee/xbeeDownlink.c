@@ -10,7 +10,7 @@
 
 #ifdef NOSECONE
 
-#include "xbee.h"
+#include <Telemetry/xbee.h>
 #include <Misc/lower_stage_iface.h>
 
 extern UART_HandleTypeDef* xBee_huart;
@@ -77,16 +77,15 @@ void processReceivedPacket ()
     {
     case 0x14:
       {
-        triggerFirstEvent ();
+        transmitFirstEvent ();
         break;
       }
     case 0x22:
       {
-        triggerSecondEvent ();
+        transmitSecondEvent ();
         break;
       }
     }
-
 }
 
 inline void processReceivedByte (uint8_t rxByte)

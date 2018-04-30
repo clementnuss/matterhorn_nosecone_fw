@@ -14,7 +14,7 @@
 #include "stm32f4xx_hal.h"
 #include "Misc/Common.h"
 #if(SIMULATION == 1)
-#include <Misc/SimDataEric.h>
+#include <Misc/SimData.h>
 #endif
 #include <Misc/rocket_constants.h>
 

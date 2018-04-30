@@ -9,7 +9,7 @@
 #include <Sensors/imu.h>
 
 #if(SIMULATION == 1)
-#include <Misc/SimDataEric.h>
+#include <Misc/SimData.h>
 #endif
 #include <Misc/Common.h>
 
@@ -74,22 +74,21 @@ uint8_t rxBuffer[TSS_COMM_BUFFER_SIZE];
 
 extern int startSimulation;
 
-void
-TK_IMU (void const * argument)
+void TK_IMU (void const * argument)
 {
 
 #if(SIMULATION == 1)
 
-  while (!startSimulation) {
-      osDelay(10);
-  }
+  while (!startSimulation)
+    {
+      osDelay (10);
+    }
 
   // Save initialization time to synchronize program clock with data
   float32_t initial_sim_time = SimData[0][SIM_TIMESTAMP] - HAL_GetTick ();
   uint32_t sensorCounter = 0;
 
-  IMU_data* newImuDataSet = &IMU_buffer[(currentImuSeqNumber + 1)
-      % CIRC_BUFFER_SIZE];
+  IMU_data* newImuDataSet = &IMU_buffer[(currentImuSeqNumber + 1) % CIRC_BUFFER_SIZE];
   //populate data
   newImuDataSet->acceleration.x = SimData[sensorCounter][SIM_ACCELX];
   newImuDataSet->acceleration.y = 0;
@@ -104,28 +103,26 @@ TK_IMU (void const * argument)
 
   for (;;)
     {
-      if ((sensorCounter < SIM_TAB_HEIGHT-1)
-	  && ((HAL_GetTick ()
-	      - (SimData[sensorCounter][SIM_TIMESTAMP] - initial_sim_time)) > 0))
-	{
-	  // change sensor data
-	  // create artificial sensor structure
-	  IMU_data* newImuDataSet = &IMU_buffer[(currentImuSeqNumber + 1)
-	      % CIRC_BUFFER_SIZE];
-	  //populate data
-	  newImuDataSet->acceleration.x = SimData[sensorCounter][SIM_ACCELX];
-	  newImuDataSet->acceleration.y = 0;
-	  newImuDataSet->acceleration.z = 0;
-	  newImuDataSet->eulerAngles.x = 0;
-	  newImuDataSet->eulerAngles.y = 0;
-	  newImuDataSet->eulerAngles.z = 0;
-	  newImuDataSet->temperatureC = 0;
+      if ((sensorCounter < SIM_TAB_HEIGHT - 1)
+          && ((HAL_GetTick () - (SimData[sensorCounter][SIM_TIMESTAMP] - initial_sim_time)) > 0))
+        {
+          // change sensor data
+          // create artificial sensor structure
+          IMU_data* newImuDataSet = &IMU_buffer[(currentImuSeqNumber + 1) % CIRC_BUFFER_SIZE];
+          //populate data
+          newImuDataSet->acceleration.x = SimData[sensorCounter][SIM_ACCELX];
+          newImuDataSet->acceleration.y = 0;
+          newImuDataSet->acceleration.z = 0;
+          newImuDataSet->eulerAngles.x = 0;
+          newImuDataSet->eulerAngles.y = 0;
+          newImuDataSet->eulerAngles.z = 0;
+          newImuDataSet->temperatureC = 0;
 
-	  //increment counters
-	  currentImuSeqNumber++;
-	  sensorCounter++;
-	}
-      osDelay (SimData[sensorCounter][SIM_TIMESTAMP]-SimData[sensorCounter-1][SIM_TIMESTAMP]-1);
+          //increment counters
+          currentImuSeqNumber++;
+          sensorCounter++;
+        }
+      osDelay (SimData[sensorCounter][SIM_TIMESTAMP] - SimData[sensorCounter - 1][SIM_TIMESTAMP] - 1);
     }
 #endif
 
@@ -145,19 +142,18 @@ TK_IMU (void const * argument)
     {
       int32_t ret = osSemaphoreWait (IMU_IntSemHandle, SPI_Timeout);
       if (ret == osOK)
-	{
-	  IMU_data* newImuDataSet = &IMU_buffer[(currentImuSeqNumber + 1) % CIRC_BUFFER_SIZE];
-	  processBuffer (newImuDataSet);
+        {
+          IMU_data* newImuDataSet = &IMU_buffer[(currentImuSeqNumber + 1) % CIRC_BUFFER_SIZE];
+          processBuffer (newImuDataSet);
 
-	  currentImuSeqNumber++;
-	}
+          currentImuSeqNumber++;
+        }
     }
 #endif
 
 }
 
-HAL_StatusTypeDef
-initIMU ()
+HAL_StatusTypeDef initIMU ()
 {
   IMU_hspi = &hspi1;
 
@@ -167,8 +163,7 @@ initIMU ()
 
   osDelay (500);
 
-  sendCommand (TSS_SET_ACCELEROMETER_RANGE, TSS_ACC_RANGE_ARGS,
-	       sizeof(TSS_ACC_RANGE_ARGS), NULL, 0);
+  sendCommand (TSS_SET_ACCELEROMETER_RANGE, TSS_ACC_RANGE_ARGS, sizeof(TSS_ACC_RANGE_ARGS), NULL, 0);
 
   /* Takes 45ms to be set. default is already Kalman filter, so no need to set again
    sendCommand (TSS_SET_FILTER_MODE, TSS_FILTER_MODE,
@@ -181,90 +176,72 @@ initIMU ()
     }
 
   uint16_t pos = 0;
-  insertCommandIntoBuffer (GET_DATA_COMMAND_BUFFER, &pos,
-			   TSS_GET_CORRECTED_ACCELEROMETER_VECTOR,
-			   3 * sizeof(float) + 10);
-  insertCommandIntoBuffer (GET_DATA_COMMAND_BUFFER, &pos,
-			   TSS_GET_TARED_ORIENTATION_AS_EULER_ANGLES,
-			   3 * sizeof(float) + 35);
-  insertCommandIntoBuffer (GET_DATA_COMMAND_BUFFER, &pos, TSS_GET_TEMPERATURE_C,
-			   1 * sizeof(float) + 10);
+  insertCommandIntoBuffer (GET_DATA_COMMAND_BUFFER, &pos, TSS_GET_CORRECTED_ACCELEROMETER_VECTOR,
+                           3 * sizeof(float) + 10);
+  insertCommandIntoBuffer (GET_DATA_COMMAND_BUFFER, &pos, TSS_GET_TARED_ORIENTATION_AS_EULER_ANGLES,
+                           3 * sizeof(float) + 35);
+  insertCommandIntoBuffer (GET_DATA_COMMAND_BUFFER, &pos, TSS_GET_TEMPERATURE_C, 1 * sizeof(float) + 10);
 
   return osOK;
 }
 
-void
-HAL_SPI_TxRxCpltCallback (SPI_HandleTypeDef *hspi)
+void HAL_SPI_TxRxCpltCallback (SPI_HandleTypeDef *hspi)
 {
   osSemaphoreRelease (IMU_IntSemHandle);
   HAL_SPI_DMAStop (IMU_hspi);
 }
 
-HAL_StatusTypeDef
-getIMUdataDMA ()
+HAL_StatusTypeDef getIMUdataDMA ()
 {
   HAL_SPI_DMAResume (IMU_hspi);
-  return HAL_SPI_TransmitReceive_DMA (IMU_hspi, GET_DATA_COMMAND_BUFFER,
-				      rxBuffer, TSS_COMM_BUFFER_SIZE);
+  return HAL_SPI_TransmitReceive_DMA (IMU_hspi, GET_DATA_COMMAND_BUFFER, rxBuffer, TSS_COMM_BUFFER_SIZE);
 }
 
-void
-processBuffer (IMU_data* tss_data)
+void processBuffer (IMU_data* tss_data)
 {
   uint16_t pos = 0;
   while (pos < TSS_COMM_BUFFER_SIZE)
     {
       if (GET_DATA_COMMAND_BUFFER[pos++] == TSS_PACKET_START)
-	{
-	  uint8_t COMMAND = GET_DATA_COMMAND_BUFFER[pos++];
-	  increasePosUntilTssReady (&pos);
-	  switch (COMMAND)
-	    {
-	    case TSS_GET_CORRECTED_ACCELEROMETER_VECTOR:
-	      {
-		uint8ToFloat ((uint8_t*) &rxBuffer[pos + 0 * sizeof(float)],
-			      &(&tss_data->acceleration)->x);
-		uint8ToFloat ((uint8_t*) &rxBuffer[pos + 1 * sizeof(float)],
-			      &(&tss_data->acceleration)->y);
-		uint8ToFloat ((uint8_t*) &rxBuffer[pos + 2 * sizeof(float)],
-			      &(&tss_data->acceleration)->z);
-	      }
-	      break;
-	    case TSS_GET_TARED_ORIENTATION_AS_EULER_ANGLES:
-	      {
-		uint8ToFloat ((uint8_t*) &rxBuffer[pos + 0 * sizeof(float)],
-			      &(&(tss_data->eulerAngles))->y);
-		uint8ToFloat ((uint8_t*) &rxBuffer[pos + 1 * sizeof(float)],
-			      &(&(tss_data->eulerAngles))->x);
-		uint8ToFloat ((uint8_t*) &rxBuffer[pos + 2 * sizeof(float)],
-			      &(&(tss_data->eulerAngles))->z);
-	      }
-	    case TSS_GET_TEMPERATURE_C:
-	      {
-		uint8ToFloat ((uint8_t*) &rxBuffer[pos + 0 * sizeof(float)],
-			      &tss_data->temperatureC);
-	      }
-	    default:
-	      break;
-	    }
-	}
+        {
+          uint8_t COMMAND = GET_DATA_COMMAND_BUFFER[pos++];
+          increasePosUntilTssReady (&pos);
+          switch (COMMAND)
+            {
+            case TSS_GET_CORRECTED_ACCELEROMETER_VECTOR:
+              {
+                uint8ToFloat ((uint8_t*) &rxBuffer[pos + 0 * sizeof(float)], &(&tss_data->acceleration)->x);
+                uint8ToFloat ((uint8_t*) &rxBuffer[pos + 1 * sizeof(float)], &(&tss_data->acceleration)->y);
+                uint8ToFloat ((uint8_t*) &rxBuffer[pos + 2 * sizeof(float)], &(&tss_data->acceleration)->z);
+              }
+              break;
+            case TSS_GET_TARED_ORIENTATION_AS_EULER_ANGLES:
+              {
+                uint8ToFloat ((uint8_t*) &rxBuffer[pos + 0 * sizeof(float)], &(&(tss_data->eulerAngles))->y);
+                uint8ToFloat ((uint8_t*) &rxBuffer[pos + 1 * sizeof(float)], &(&(tss_data->eulerAngles))->x);
+                uint8ToFloat ((uint8_t*) &rxBuffer[pos + 2 * sizeof(float)], &(&(tss_data->eulerAngles))->z);
+              }
+            case TSS_GET_TEMPERATURE_C:
+              {
+                uint8ToFloat ((uint8_t*) &rxBuffer[pos + 0 * sizeof(float)], &tss_data->temperatureC);
+              }
+            default:
+              break;
+            }
+        }
     }
 }
 
-void
-increasePosUntilTssReady (uint16_t*pos)
+void increasePosUntilTssReady (uint16_t*pos)
 {
-  while (rxBuffer[(*pos)++] != TSS_SPI_READY_STATE
-      && (*pos < TSS_COMM_BUFFER_SIZE))
+  while (rxBuffer[(*pos)++] != TSS_SPI_READY_STATE && (*pos < TSS_COMM_BUFFER_SIZE))
     ;
 }
 
-HAL_StatusTypeDef
-getCorrectedAccelerometerVector (float3D* data)
+HAL_StatusTypeDef getCorrectedAccelerometerVector (float3D* data)
 {
   uint8_t accVectors[3 * sizeof(float)];
-  sendCommand (TSS_GET_CORRECTED_ACCELEROMETER_VECTOR, NULL, 0, accVectors,
-	       sizeof(accVectors));
+  sendCommand (TSS_GET_CORRECTED_ACCELEROMETER_VECTOR, NULL, 0, accVectors, sizeof(accVectors));
 
   uint8ToFloat ((uint8_t*) &accVectors[0 * sizeof(float)], &data->x);
   uint8ToFloat ((uint8_t*) &accVectors[1 * sizeof(float)], &data->y);
@@ -273,12 +250,10 @@ getCorrectedAccelerometerVector (float3D* data)
   return HAL_OK;
 }
 
-HAL_StatusTypeDef
-getUntaredEulerAngles (float3D* data)
+HAL_StatusTypeDef getUntaredEulerAngles (float3D* data)
 {
   uint8_t accVectors[3 * sizeof(float)];
-  sendCommand (TSS_GET_UNTARED_ORIENTATION_AS_EULER_ANGLES, NULL, 0, accVectors,
-	       sizeof(accVectors));
+  sendCommand (TSS_GET_UNTARED_ORIENTATION_AS_EULER_ANGLES, NULL, 0, accVectors, sizeof(accVectors));
 
   uint8ToFloat ((uint8_t*) &accVectors[0 * sizeof(float)], &data->y);
   uint8ToFloat ((uint8_t*) &accVectors[1 * sizeof(float)], &data->x);
@@ -289,24 +264,20 @@ getUntaredEulerAngles (float3D* data)
 /**
  * Wait for the TSS SPI state. Will send "CLEAR_BUFFER" (0x00) if waiting to be IDLE, and "SEND_DATA" (0xFF) otherwise.
  */
-HAL_StatusTypeDef
-waitTssState (uint32_t timeoutmMs, uint8_t tss_spi_state)
+HAL_StatusTypeDef waitTssState (uint32_t timeoutmMs, uint8_t tss_spi_state)
 {
   uint32_t tickstart = HAL_GetTick ();
   uint8_t rxByte = 0x14;
   uint8_t txByte = TSS_SEND_DATA;
 
-  while ((rxByte != tss_spi_state)
-      && ((HAL_GetTick () - tickstart) < timeoutmMs))
+  while ((rxByte != tss_spi_state) && ((HAL_GetTick () - tickstart) < timeoutmMs))
     {
       HAL_SPI_TransmitReceive (IMU_hspi, &txByte, &rxByte, 1, 1);
     }
   return (rxByte == tss_spi_state) ? HAL_OK : HAL_TIMEOUT;
 }
 
-HAL_StatusTypeDef
-sendCommand (uint8_t command, uint8_t* args, uint8_t argsSize, uint8_t* rxData,
-	     uint16_t rxSize)
+HAL_StatusTypeDef sendCommand (uint8_t command, uint8_t* args, uint8_t argsSize, uint8_t* rxData, uint16_t rxSize)
 {
 
   HAL_SPI_Transmit (IMU_hspi, &TSS_PACKET_START, 1, 1);
@@ -327,18 +298,17 @@ sendCommand (uint8_t command, uint8_t* args, uint8_t argsSize, uint8_t* rxData,
 
       /** fill the receive buffer with 0xFF, which will be sent when transmitting the data*/
       for (uint16_t i = 0; i < rxSize; i++)
-	{
-	  rxData[i] = TSS_SEND_DATA;
-	}
+        {
+          rxData[i] = TSS_SEND_DATA;
+        }
       uint32_t timeout = (8 * rxSize) / SPI_rate_kbpms + 1;
       HAL_SPI_Receive (IMU_hspi, rxData, rxSize, timeout);
     }
   return HAL_OK;
 }
 
-void
-insertCommandIntoBuffer (uint8_t* commandBuffer, uint16_t* pos,
-			 uint8_t tss_command, uint16_t tss_send_packet_number)
+void insertCommandIntoBuffer (uint8_t* commandBuffer, uint16_t* pos, uint8_t tss_command,
+                              uint16_t tss_send_packet_number)
 {
 
   commandBuffer[(*pos)++] = TSS_PACKET_START;

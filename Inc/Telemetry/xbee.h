@@ -2,7 +2,7 @@
  * xbee.h
  *
  *  Created on: 9 Apr 2018
- *      Author: Clément Nussbaumer
+ *      Author: ClÃ©ment Nussbaumer
  */
 
 #ifndef TELEMETRY_XBEE_XBEE_H_
