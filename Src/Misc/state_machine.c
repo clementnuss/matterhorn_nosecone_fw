@@ -51,6 +51,7 @@ TK_state_machine (void const * argument)
   // Hyp: rocket is on rail waiting for lift-off
   currentState = STATE_CALIBRATION;
 
+
   // State Machine main task loop
   for (;;)
     {

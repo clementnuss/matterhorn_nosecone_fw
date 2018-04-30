@@ -9,7 +9,7 @@
 #include <Sensors/imu.h>
 
 #if(SIMULATION == 1)
-#include <Misc/SimData.h>
+#include <Misc/SimDataEric.h>
 #endif
 #include <Misc/Common.h>
 
