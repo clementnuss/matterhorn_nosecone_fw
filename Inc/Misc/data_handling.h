@@ -5,12 +5,23 @@
  *      Author: Clément Nussbaumer
  */
 
-void* createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_data, uint32_t measurement_time);
+#include <Misc/datastructs.h>
 
-inline void write8 (uint8_t v);
+#ifndef DATA_HANDLING_H_
+#define DATA_HANDLING_H_
 
-inline void write16 (uint16_t v);
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
-inline void write32u (uint32_t v);
+  void TK_data(const void* args);
 
-inline void write32f (float32_t v);
+  Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_data, uint32_t measurement_time,
+                                             uint32_t telemetrySeqNumber);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //DATA_HANDLING_H_

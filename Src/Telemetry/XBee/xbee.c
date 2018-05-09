@@ -5,7 +5,6 @@
  *      Author: Clément Nussbaumer
  */
 
-
 #include "stm32f4xx_hal.h"
 #include "Misc/Common.h"
 
@@ -43,32 +42,38 @@ uint8_t XBEE_SEND_FRAME_TIMEOUT_MS = 40;
 uint8_t currentCrc = 0;
 uint8_t payloadBuffer[XBEE_PAYLOAD_MAX_SIZE];
 uint8_t txDmaBuffer[2 * XBEE_PAYLOAD_MAX_SIZE + XBEE_CHECKSUM_SIZE + XBEE_FRAME_BEGINNING_SIZE];
-uint16_t currentPos = 0;
+uint16_t currentXbeeTxBufPos = 0;
 
 void TK_xBeeTelemetry (const void* args)
 {
 
   initXbee ();
+  uint32_t packetStartTime = 0;
 
   for (;;)
     {
 
-      osEvent event = osMessageGet (xBeeQueueHandle, XBEE_SEND_FRAME_TIMEOUT_MS);
+      if ((currentXbeeTxBufPos > 0) && (HAL_GetTick () - packetStartTime) > XBEE_SEND_FRAME_TIMEOUT_MS)
+        {
+          sendXbeeFrame();
+        }
+
+      osEvent event = osMessageGet (xBeeQueueHandle, 5);
       if (event.status == osEventMessage)
         {
+          if (currentXbeeTxBufPos == 0){
+              packetStartTime = HAL_GetTick();
+          }
+
           Telemetry_Message* m = event.value.p;
           sendData (m->ptr, m->size);
           vPortFree (m->ptr);
         }
-      else {
-          sendXbeeFrame();
-      }
     }
 }
 
-void receiveData(){
-
-
+void receiveData ()
+{
 
 }
 
@@ -79,17 +84,17 @@ void sendData (uint8_t* txData, uint16_t txDataSize)
       return;
     }
 
-  if (currentPos + txDataSize >= XBEE_PAYLOAD_MAX_SIZE)
+  if (currentXbeeTxBufPos + txDataSize >= XBEE_PAYLOAD_MAX_SIZE)
     {
       sendXbeeFrame ();
     }
 
-  if (currentPos + txDataSize < XBEE_PAYLOAD_MAX_SIZE)
+  if (currentXbeeTxBufPos + txDataSize < XBEE_PAYLOAD_MAX_SIZE)
     {
       addToBuffer (txData, txDataSize);
     }
 
-  if (XBEE_PAYLOAD_MAX_SIZE - currentPos < 20) // send the XBee frame if there remains less than 20 bytes available in the txDataBuffer
+  if (XBEE_PAYLOAD_MAX_SIZE - currentXbeeTxBufPos < 20) // send the XBee frame if there remains less than 20 bytes available in the txDataBuffer
     {
       sendXbeeFrame ();
     }
@@ -99,9 +104,9 @@ inline void addToBuffer (uint8_t* txData, uint16_t txDataSize)
 {
   for (uint16_t i = 0; i < txDataSize; i++)
     {
-      payloadBuffer[currentPos + i] = txData[i];
+      payloadBuffer[currentXbeeTxBufPos + i] = txData[i];
     }
-  currentPos += txDataSize;
+  currentXbeeTxBufPos += txDataSize;
 }
 
 void sendXbeeFrame ()
@@ -111,7 +116,7 @@ void sendXbeeFrame ()
       return;
     }
 
-  uint16_t payloadAndConfigSize = XBEE_FRAME_OPTIONS_SIZE + currentPos;
+  uint16_t payloadAndConfigSize = XBEE_FRAME_OPTIONS_SIZE + currentXbeeTxBufPos;
 
   uint16_t pos = 0;
   txDmaBuffer[pos++] = XBEE_START;
@@ -123,7 +128,7 @@ void sendXbeeFrame ()
     }
   currentCrc = XBEE_FRAME_OPTIONS_CRC;
 
-  for (int i = 0; i < currentPos; ++i)
+  for (int i = 0; i < currentXbeeTxBufPos; ++i)
     {
       uint8_t escapedChar;
       if ((escapedChar = escapedCharacter (payloadBuffer[i])))
@@ -143,7 +148,7 @@ void sendXbeeFrame ()
   txDmaBuffer[pos++] = currentCrc;
   HAL_UART_Transmit_DMA (xBee_huart, txDmaBuffer, pos);
 
-  currentPos = 0;
+  currentXbeeTxBufPos = 0;
 }
 
 void HAL_UART_TxCpltCallback (UART_HandleTypeDef *huart)

@@ -197,7 +197,7 @@ HAL_StatusTypeDef getIMUdataDMA ()
   return HAL_SPI_TransmitReceive_DMA (IMU_hspi, GET_DATA_COMMAND_BUFFER, rxBuffer, TSS_COMM_BUFFER_SIZE);
 }
 
-void processBuffer (IMU_data* tss_data)
+osStatus processBuffer (IMU_data* tss_data)
 {
   uint16_t pos = 0;
   while (pos < TSS_COMM_BUFFER_SIZE)
@@ -213,6 +213,11 @@ void processBuffer (IMU_data* tss_data)
                 uint8ToFloat ((uint8_t*) &rxBuffer[pos + 0 * sizeof(float)], &(&tss_data->acceleration)->x);
                 uint8ToFloat ((uint8_t*) &rxBuffer[pos + 1 * sizeof(float)], &(&tss_data->acceleration)->y);
                 uint8ToFloat ((uint8_t*) &rxBuffer[pos + 2 * sizeof(float)], &(&tss_data->acceleration)->z);
+                if (abs_fl32 (tss_data->acceleration.x) > 25 || abs_fl32 (tss_data->acceleration.y > 25)
+                    || abs_fl32 (tss_data->acceleration.z > 25))
+                  {
+                    return osErrorOS;
+                  }
               }
               break;
             case TSS_GET_TARED_ORIENTATION_AS_EULER_ANGLES:
@@ -230,6 +235,8 @@ void processBuffer (IMU_data* tss_data)
             }
         }
     }
+
+  return osOK;
 }
 
 void increasePosUntilTssReady (uint16_t*pos)

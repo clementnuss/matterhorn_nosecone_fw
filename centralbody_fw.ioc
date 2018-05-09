@@ -1,7 +1,7 @@
 #MicroXplorer Configuration settings - do not modify
 Dma.I2C2_RX.2.Direction=DMA_PERIPH_TO_MEMORY
 Dma.I2C2_RX.2.FIFOMode=DMA_FIFOMODE_DISABLE
-Dma.I2C2_RX.2.Instance=DMA1_Stream2
+Dma.I2C2_RX.2.Instance                  =DMA1_Stream2
 Dma.I2C2_RX.2.MemDataAlignment=DMA_MDATAALIGN_BYTE
 Dma.I2C2_RX.2.MemInc=DMA_MINC_ENABLE
 Dma.I2C2_RX.2.Mode=DMA_NORMAL

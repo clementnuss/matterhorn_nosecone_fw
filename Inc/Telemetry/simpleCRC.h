@@ -6,7 +6,7 @@
 #ifndef AVIONICS_TELEMETRY_SIMPLECRC_H
 #define AVIONICS_TELEMETRY_SIMPLECRC_H
 
-#include "Misc/Common.h"
+#include <stdint.h>
 
 static uint16_t CRC_16_TABLE[] =
   { 0x0000, 0xa2eb, 0xe73d, 0x45d6, 0x6c91, 0xce7a, 0x8bac, 0x2947, 0xd922, 0x7bc9, 0x3e1f, 0x9cf4, 0xb5b3, 0x1758,

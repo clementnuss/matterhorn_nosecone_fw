@@ -59,8 +59,10 @@
 
 /* Private define ------------------------------------------------------------*/
 
-#define LED_1_Pin GPIO_PIN_2
-#define LED_1_GPIO_Port GPIOE
+#define CENTRAL_TX_Pin GPIO_PIN_0
+#define CENTRAL_TX_GPIO_Port GPIOA
+#define CENTRAL_RX_Pin GPIO_PIN_1
+#define CENTRAL_RX_GPIO_Port GPIOA
 #define IMU_NSS_Pin GPIO_PIN_4
 #define IMU_NSS_GPIO_Port GPIOA
 #define IMU_SCK_Pin GPIO_PIN_5
@@ -75,18 +77,26 @@
 #define ABS_P_SENS_ENn_GPIO_Port GPIOB
 #define DIF_P_SENS_ENn_Pin GPIO_PIN_1
 #define DIF_P_SENS_ENn_GPIO_Port GPIOB
+#define SD_ENn_Pin GPIO_PIN_9
+#define SD_ENn_GPIO_Port GPIOE
 #define GPS_RESETn_Pin GPIO_PIN_10
 #define GPS_RESETn_GPIO_Port GPIOE
 #define GPS_SWITCH_Pin GPIO_PIN_11
 #define GPS_SWITCH_GPIO_Port GPIOE
-#define IMU_ENn_Pin GPIO_PIN_12
+#define XBEE_TX_Pin GPIO_PIN_8
+#define XBEE_TX_GPIO_Port GPIOD
+#define XBEE_RX_Pin GPIO_PIN_9
+#define XBEE_RX_GPIO_Port GPIOD
+#define IMU_ENn_Pin GPIO_PIN_15
 #define IMU_ENn_GPIO_Port GPIOD
-#define BUZZER_Pin GPIO_PIN_14
-#define BUZZER_GPIO_Port GPIOD
-#define REC_1ST_EVENT_Pin GPIO_PIN_8
-#define REC_1ST_EVENT_GPIO_Port GPIOA
-#define REC_2ND_EVENT_Pin GPIO_PIN_10
-#define REC_2ND_EVENT_GPIO_Port GPIOA
+#define GPS_TX_Pin GPIO_PIN_6
+#define GPS_TX_GPIO_Port GPIOC
+#define GPS_RX_Pin GPIO_PIN_7
+#define GPS_RX_GPIO_Port GPIOC
+#define AUX_IO_10_Pin GPIO_PIN_8
+#define AUX_IO_10_GPIO_Port GPIOA
+#define AUX_IO_12_Pin GPIO_PIN_10
+#define AUX_IO_12_GPIO_Port GPIOA
 #define IMU_INT0_Pin GPIO_PIN_5
 #define IMU_INT0_GPIO_Port GPIOD
 #define IMU_INT0_EXTI_IRQn EXTI9_5_IRQn

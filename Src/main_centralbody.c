@@ -53,9 +53,9 @@
 
 /* USER CODE BEGIN Includes */
 
-#include "Misc/Common.h"
+#include <Misc/Common.h>
 
-#ifdef NOSECONE
+#ifdef CENTRALBODY
 
 #include <Sensors/imu.h>
 #include <Sensors/barometer.h>
@@ -67,31 +67,27 @@ I2C_HandleTypeDef hi2c2;
 DMA_HandleTypeDef hdma_i2c2_rx;
 DMA_HandleTypeDef hdma_i2c2_tx;
 
-SD_HandleTypeDef hsd;
-DMA_HandleTypeDef hdma_sdio;
-
 SPI_HandleTypeDef hspi1;
 DMA_HandleTypeDef hdma_spi1_rx;
 DMA_HandleTypeDef hdma_spi1_tx;
 
 TIM_HandleTypeDef htim7;
 
-UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart1;
+UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
-DMA_HandleTypeDef hdma_uart4_tx;
+DMA_HandleTypeDef hdma_usart2_tx;
 DMA_HandleTypeDef hdma_usart3_rx;
 DMA_HandleTypeDef hdma_usart3_tx;
 
 osThreadId defaultTaskHandle;
 osThreadId IMU_ifaceHandle;
-osThreadId xBeeTelemetryHandle;
 osThreadId fetchFBarometerHandle;
-osThreadId centralizeDataHandle;
-osThreadId xBee_RCHandle;
 osThreadId state_machineHandle;
-osThreadId kalmanFilterHandle;
-osMessageQId xBeeQueueHandle;
+osThreadId noseCommHandle;
+osThreadId physical_ifaceHandle;
+osThreadId ab_controllerHandle;
+osThreadId kalmanHandle;
 osSemaphoreId IMU_IntSemHandle;
 osSemaphoreId xBeeTxBufferSemHandle;
 osSemaphoreId pressureSensorI2cSemHandle;
@@ -99,20 +95,13 @@ osSemaphoreId pressureSensorI2cSemHandle;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-FATFS mynewdiskFatFs;
-/* File system object for User logical drive */
-FIL MyFile;
-/* File object */
-char mynewdiskPath[4];
-/* User logical drive path */
-
 int startSimulation = 1;
 
 IMU_data IMU_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 BARO_data BARO_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 
-UART_HandleTypeDef* xBee_huart;
-UART_HandleTypeDef* central_huart;
+UART_HandleTypeDef* nose_huart;
+UART_HandleTypeDef* airbrake_huart;
 
 /* USER CODE END PV */
 
@@ -123,23 +112,23 @@ static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM7_Init(void);
-static void MX_USART3_UART_Init(void);
 static void MX_I2C2_Init(void);
-static void MX_SDIO_SD_Init(void);
-static void MX_UART4_Init(void);
+static void MX_USART3_UART_Init(void);
+static void MX_USART2_UART_Init(void);
 void StartDefaultTask(void const * argument);
 extern void TK_IMU(void const * argument);
-extern void TK_xBeeTelemetry(void const * argument);
 extern void TK_fetchBarometer(void const * argument);
-extern void TK_data(void const * argument);
-extern void TK_xBee_receive(void const * argument);
 extern void TK_state_machine(void const * argument);
+extern void TK_nose_communication(void const * argument);
+extern void TK_physical_iface(void const * argument);
+extern void TK_ab_controller(void const * argument);
 extern void TK_Kalman(void const * argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 
-void initPeripherals ();
+void
+initPeripherals ();
 
 /* USER CODE END PFP */
 
@@ -180,10 +169,9 @@ int main(void)
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_TIM7_Init();
-  MX_USART3_UART_Init();
   MX_I2C2_Init();
-  MX_SDIO_SD_Init();
-  MX_UART4_Init();
+  MX_USART3_UART_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT (&htim7);
   HAL_GPIO_WritePin (GPS_ENn_GPIO_Port, GPS_ENn_Pin, GPIO_PIN_RESET);
@@ -228,38 +216,33 @@ int main(void)
   osThreadDef(IMU_iface, TK_IMU, osPriorityAboveNormal, 0, 128);
   IMU_ifaceHandle = osThreadCreate(osThread(IMU_iface), NULL);
 
-  /* definition and creation of xBeeTelemetry */
-  osThreadDef(xBeeTelemetry, TK_xBeeTelemetry, osPriorityBelowNormal, 0, 128);
-  xBeeTelemetryHandle = osThreadCreate(osThread(xBeeTelemetry), NULL);
-
   /* definition and creation of fetchFBarometer */
   osThreadDef(fetchFBarometer, TK_fetchBarometer, osPriorityAboveNormal, 0, 128);
   fetchFBarometerHandle = osThreadCreate(osThread(fetchFBarometer), NULL);
 
-  /* definition and creation of centralizeData */
-  osThreadDef(centralizeData, TK_data, osPriorityNormal, 0, 128);
-  centralizeDataHandle = osThreadCreate(osThread(centralizeData), NULL);
-
-  /* definition and creation of xBee_RC */
-  osThreadDef(xBee_RC, TK_xBee_receive, osPriorityNormal, 0, 128);
-  xBee_RCHandle = osThreadCreate(osThread(xBee_RC), NULL);
-
   /* definition and creation of state_machine */
-  osThreadDef(state_machine, TK_state_machine, osPriorityHigh, 0, 128);
+  osThreadDef(state_machine, TK_state_machine, osPriorityAboveNormal, 0, 128);
   state_machineHandle = osThreadCreate(osThread(state_machine), NULL);
 
-  /* definition and creation of kalmanFilter */
-  osThreadDef(kalmanFilter, TK_Kalman, osPriorityNormal, 0, 1000);
-  kalmanFilterHandle = osThreadCreate(osThread(kalmanFilter), NULL);
+  /* definition and creation of noseComm */
+  osThreadDef(noseComm, TK_nose_communication, osPriorityAboveNormal, 0, 128);
+  noseCommHandle = osThreadCreate(osThread(noseComm), NULL);
+
+  /* definition and creation of physical_iface */
+  osThreadDef(physical_iface, TK_physical_iface, osPriorityHigh, 0, 128);
+  physical_ifaceHandle = osThreadCreate(osThread(physical_iface), NULL);
+
+  /* definition and creation of ab_controller */
+  osThreadDef(ab_controller, TK_ab_controller, osPriorityNormal, 0, 128);
+  ab_controllerHandle = osThreadCreate(osThread(ab_controller), NULL);
+
+  /* definition and creation of kalman */
+  osThreadDef(kalman, TK_Kalman, osPriorityHigh, 0, 1000);
+  kalmanHandle = osThreadCreate(osThread(kalman), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
-  /* Create the queue(s) */
-  /* definition and creation of xBeeQueue */
-  osMessageQDef(xBeeQueue, 16, Telemetry_Message);
-  xBeeQueueHandle = osMessageCreate(osMessageQ(xBeeQueue), NULL);
 
   /* USER CODE BEGIN RTOS_QUEUES */
 
@@ -349,7 +332,7 @@ static void MX_I2C2_Init(void)
 {
 
   hi2c2.Instance = I2C2;
-  hi2c2.Init.ClockSpeed = 100000;
+  hi2c2.Init.ClockSpeed = 200000;
   hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c2.Init.OwnAddress1 = 0;
   hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -361,20 +344,6 @@ static void MX_I2C2_Init(void)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
-
-}
-
-/* SDIO init function */
-static void MX_SDIO_SD_Init(void)
-{
-
-  hsd.Instance = SDIO;
-  hsd.Init.ClockEdge = SDIO_CLOCK_EDGE_RISING;
-  hsd.Init.ClockBypass = SDIO_CLOCK_BYPASS_DISABLE;
-  hsd.Init.ClockPowerSave = SDIO_CLOCK_POWER_SAVE_DISABLE;
-  hsd.Init.BusWide = SDIO_BUS_WIDE_1B;
-  hsd.Init.HardwareFlowControl = SDIO_HARDWARE_FLOW_CONTROL_DISABLE;
-  hsd.Init.ClockDiv = 0;
 
 }
 
@@ -426,25 +395,6 @@ static void MX_TIM7_Init(void)
 
 }
 
-/* UART4 init function */
-static void MX_UART4_Init(void)
-{
-
-  huart4.Instance = UART4;
-  huart4.Init.BaudRate = 115200;
-  huart4.Init.WordLength = UART_WORDLENGTH_8B;
-  huart4.Init.StopBits = UART_STOPBITS_1;
-  huart4.Init.Parity = UART_PARITY_NONE;
-  huart4.Init.Mode = UART_MODE_TX_RX;
-  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart4) != HAL_OK)
-  {
-    _Error_Handler(__FILE__, __LINE__);
-  }
-
-}
-
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
@@ -458,6 +408,25 @@ static void MX_USART1_UART_Init(void)
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
   if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    _Error_Handler(__FILE__, __LINE__);
+  }
+
+}
+
+/* USART2 init function */
+static void MX_USART2_UART_Init(void)
+{
+
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 9600;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -502,9 +471,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
-  /* DMA1_Stream4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+  /* DMA1_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
   /* DMA1_Stream7_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream7_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream7_IRQn);
@@ -514,9 +483,6 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream3_IRQn);
-  /* DMA2_Stream5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream5_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
 }
 
@@ -533,11 +499,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOE_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOE, LED_1_Pin|GPS_SWITCH_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPS_ENn_GPIO_Port, GPS_ENn_Pin, GPIO_PIN_SET);
@@ -546,16 +515,23 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, ABS_P_SENS_ENn_Pin|DIF_P_SENS_ENn_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, SD_ENn_Pin|GPS_RESETn_Pin, GPIO_PIN_SET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPS_SWITCH_GPIO_Port, GPS_SWITCH_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPS_RESETn_GPIO_Port, GPS_RESETn_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(IMU_ENn_GPIO_Port, IMU_ENn_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, AUX_IO_10_Pin|AUX_IO_12_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(BUZZER_GPIO_Port, BUZZER_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, REC_1ST_EVENT_Pin|REC_2ND_EVENT_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : LED_1_Pin GPS_RESETn_Pin GPS_SWITCH_Pin */
+  GPIO_InitStruct.Pin = LED_1_Pin|GPS_RESETn_Pin|GPS_SWITCH_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pin : GPS_ENn_Pin */
   GPIO_InitStruct.Pin = GPS_ENn_Pin;
@@ -571,22 +547,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SD_ENn_Pin GPS_RESETn_Pin GPS_SWITCH_Pin */
-  GPIO_InitStruct.Pin = SD_ENn_Pin|GPS_RESETn_Pin|GPS_SWITCH_Pin;
+  /*Configure GPIO pins : IMU_ENn_Pin BUZZER_Pin */
+  GPIO_InitStruct.Pin = IMU_ENn_Pin|BUZZER_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : IMU_ENn_Pin */
-  GPIO_InitStruct.Pin = IMU_ENn_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(IMU_ENn_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : AUX_IO_10_Pin AUX_IO_12_Pin */
-  GPIO_InitStruct.Pin = AUX_IO_10_Pin|AUX_IO_12_Pin;
+  /*Configure GPIO pins : REC_1ST_EVENT_Pin REC_2ND_EVENT_Pin */
+  GPIO_InitStruct.Pin = REC_1ST_EVENT_Pin|REC_2ND_EVENT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -606,19 +575,22 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void initPeripherals ()
+void
+initPeripherals ()
 {
-  xBee_huart = &huart3;
-  HAL_UART_Init (xBee_huart);
-
-  central_huart = &huart4;
-  HAL_UART_Init (central_huart);
+  // initiate nosecone serial communication
+  nose_huart = &huart3;
+  HAL_UART_Init (nose_huart);
+  // initiate airbrake serial communication
+  airbrake_huart = &huart2;
+  HAL_UART_Init (airbrake_huart);
 }
 
 /*
  * IMU interrupt handler
  */
-void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin)
+void
+HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin)
 {
   getIMUdataDMA ();
 }
@@ -628,36 +600,8 @@ void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin)
 /* StartDefaultTask function */
 void StartDefaultTask(void const * argument)
 {
-  /* init code for FATFS */
-  MX_FATFS_Init();
 
   /* USER CODE BEGIN 5 */
-
-  HAL_GPIO_WritePin (SD_ENn_GPIO_Port, SD_ENn_Pin, RESET);
-
-  //HAL_SD_Init(&hsd);
-
-  uint32_t wbytes;
-  /* File write counts */
-  uint8_t wtext[] = "text to write logical disk";
-
-  /* File write buffer */
-
-  if (FATFS_LinkDriver (&SD_Driver, mynewdiskPath) == 0)
-    {
-      if (f_mount (&mynewdiskFatFs, (TCHAR const*) mynewdiskPath, 0) == FR_OK)
-        {
-          if (f_open (&MyFile, "STM32.TXT", FA_CREATE_ALWAYS | FA_WRITE) == FR_OK)
-            {
-              if (f_write (&MyFile, wtext, sizeof(wtext), (void *) &wbytes) == FR_OK)
-                ;
-                {
-                  f_close (&MyFile);
-                }
-            }
-        }
-    }
-  FATFS_UnLinkDriver (mynewdiskPath);
 
   HAL_GPIO_WritePin (GPS_ENn_GPIO_Port, GPS_ENn_Pin, GPIO_PIN_RESET);
   osDelay (500);

@@ -10,8 +10,7 @@
 
 #include "cmsis_os.h"
 
-#define XBEE_PAYLOAD_MAX_SIZE 214
-#define XBEE_PACKET_SEND_TIMEOUT 20
+#define XBEE_PAYLOAD_MAX_SIZE 130
 
 #define XBEE_PERFORMANCE_BPS 80000
 
@@ -29,6 +28,8 @@ uint8_t escapedCharacter (uint8_t byte);
 /* XBee receive headers */
 
 void TK_xBee_receive (const void* args);
+
+void xBee_rxCpltCallback ();
 
 void processReceivedPacket ();
 

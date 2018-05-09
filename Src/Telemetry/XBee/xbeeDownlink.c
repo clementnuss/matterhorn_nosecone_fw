@@ -20,7 +20,7 @@ extern UART_HandleTypeDef* xBee_huart;
 #define PREAMBLE_FLAG 0x55
 #define RX_PACKET_SIZE 8
 
-uint8_t rxPacketBuffer[RX_PACKET_SIZE];
+uint8_t rxGpsPacketBuffer[RX_PACKET_SIZE];
 
 uint32_t lastDmaStreamIndex = 0, endDmaStreamIndex = 0;
 uint8_t rxBuffer[XBEE_RX_BUFFER_SIZE];
@@ -36,7 +36,6 @@ uint8_t currentRxState = PARSING_PREAMBLE;
 
 void TK_xBee_receive (const void* args)
 {
-
   HAL_UART_Receive_DMA (xBee_huart, rxBuffer, XBEE_RX_BUFFER_SIZE);
 
   for (;;)
@@ -51,7 +50,7 @@ void TK_xBee_receive (const void* args)
     }
 }
 
-void HAL_UART_RxCpltCallback (UART_HandleTypeDef *huart)
+void xBee_rxCpltCallback ()
 {
   while (lastDmaStreamIndex < XBEE_RX_BUFFER_SIZE)
     {
@@ -73,7 +72,7 @@ void resetStateMachine ()
 void processReceivedPacket ()
 {
 
-  switch (rxPacketBuffer[0])
+  switch (rxGpsPacketBuffer[0])
     {
     case 0x14:
       {
@@ -109,7 +108,7 @@ inline void processReceivedByte (uint8_t rxByte)
       }
     case PARSING_PACKET:
       {
-        rxPacketBuffer[packetCnt++] = rxByte;
+        rxGpsPacketBuffer[packetCnt++] = rxByte;
         currentChecksum += rxByte;
         if (packetCnt == RX_PACKET_SIZE)
           {

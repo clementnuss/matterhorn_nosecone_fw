@@ -57,7 +57,7 @@ static float currentLocationTemperature = 1.6f;
  */
 
 
-#define ADJUSTED_SEA_LEVEL_PRESSURE 1018.2
+#define ADJUSTED_SEA_LEVEL_PRESSURE 1013.4
 
 /*
 static double airSpeedFromPitotPressure(uint16_t pitotPressure) {

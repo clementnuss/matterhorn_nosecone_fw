@@ -8,7 +8,11 @@
 #ifndef INCLUDE_DATASTRUCTS_H_
 #define INCLUDE_DATASTRUCTS_H_
 
-#include "stm32f4xx_hal.h"
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
+#include <stdint.h>
 
 typedef float float32_t;
 typedef double float64_t;
@@ -37,5 +41,9 @@ typedef struct
   void* ptr;
   uint16_t size;
 } Telemetry_Message;
+
+#ifdef __cplusplus
+ }
+#endif
 
 #endif /* INCLUDE_DATASTRUCTS_H_ */

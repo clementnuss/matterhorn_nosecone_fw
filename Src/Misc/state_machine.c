@@ -125,7 +125,7 @@ void TK_state_machine (void const * argument)
               {
 
                 // Compute lift-off triggers for acceleration
-                uint8_t liftoffAccelTrig = (abs(imu_data->acceleration.x) > ROCKET_CST_LIFTOFF_TRIG_ACCEL);
+                uint8_t liftoffAccelTrig = (abs_fl32(imu_data->acceleration.x) > ROCKET_CST_LIFTOFF_TRIG_ACCEL);
 
                 // detect lift-off
                 if (liftoffAccelTrig)

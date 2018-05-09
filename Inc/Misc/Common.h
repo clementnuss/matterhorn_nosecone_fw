@@ -8,15 +8,19 @@
 #ifndef INCLUDE_COMMON_H_
 #define INCLUDE_COMMON_H_
 
+#ifdef __cplusplus
+ extern "C" {
+#endif
+
 #include "datastructs.h"
 #include <stm32f4xx_hal.h>
 
 #define CIRC_BUFFER_SIZE 8
 #define CCMRAM __attribute__((section(".ccmram")))
 
-#define SIMULATION 1 // 0 production mode, 1 simulation mode
-//#define NOSECONE
-#define CENTRALBODY
+#define SIMULATION 0 // 0 production mode, 1 simulation mode
+#define NOSECONE
+//#define CENTRALBODY
 
 #if defined(NOSECONE) && defined(CENTRALBODY)
 #error CENTRALBODY and NOSECONE cannot be both defined
@@ -103,5 +107,9 @@ static inline float32_t array_mean(float32_t* array, uint8_t arraySize)
 
   return sum/arraySize;
 }
+
+#ifdef __cplusplus
+ }
+#endif
 
 #endif /* INCLUDE_COMMON_H_ */
