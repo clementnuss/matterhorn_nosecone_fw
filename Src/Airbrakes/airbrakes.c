@@ -9,8 +9,6 @@
 #include "Misc/Common.h"
 #include <cmsis_os.h>
 
-#ifdef CENTRALBODY
-
 #include "Airbrakes/controller_functions.h"
 
 extern float32_t kalman_air_speed, kalman_altitude;
@@ -47,5 +45,3 @@ void TK_ab_controller (void const * argument)
       lastAirbrakesUpdate = HAL_GetTick();
     }
 }
-
-#endif

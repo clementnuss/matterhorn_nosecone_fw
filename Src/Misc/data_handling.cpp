@@ -30,35 +30,23 @@ void TK_data (void const * args)
   for (;;)
     {
 
-      if (currentImuSeqNumber > lastImuSeqNumber || currentBaroSeqNumber > lastBaroSeqNumber)
-        {
-          BARO_data* baro_data;
-          if (currentBaroSeqNumber <= lastBaroSeqNumber)
-            {
-              baro_data = &BARO_buffer[currentBaroSeqNumber % CIRC_BUFFER_SIZE];
-              baro_data->pressure = 1000.0;
-              baro_data->altitude = 314.0;
-              baro_data->temperature = 18.0;
-            }
-          else
-            {
-              baro_data = &BARO_buffer[currentBaroSeqNumber % CIRC_BUFFER_SIZE];
-              lastBaroSeqNumber = currentBaroSeqNumber;
-            }
+      uint32_t measurement_time = HAL_GetTick ();
 
-          uint32_t measurement_time = HAL_GetTick ();
-          IMU_data* imu_data = &IMU_buffer[currentImuSeqNumber % CIRC_BUFFER_SIZE];
-          lastImuSeqNumber = currentImuSeqNumber;
+      IMU_data* imu_data = &IMU_buffer[currentImuSeqNumber % CIRC_BUFFER_SIZE];
+      BARO_data* baro_data = &BARO_buffer[currentBaroSeqNumber % CIRC_BUFFER_SIZE];
 
-          Telemetry_Message m = createTelemetryDatagram (imu_data, baro_data, measurement_time, telemetrySeqNumber++);
-          osMessagePut (xBeeQueueHandle, (uint32_t) &m, 50);
-        }
+      lastImuSeqNumber = currentImuSeqNumber;
+      lastBaroSeqNumber = currentBaroSeqNumber;
 
-      osDelay (15);
+      Telemetry_Message m = createTelemetryDatagram (imu_data, baro_data, measurement_time, telemetrySeqNumber++);
+      osMessagePut (xBeeQueueHandle, (uint32_t) &m, 50);
+
+      osDelay (15 - (HAL_GetTick() - measurement_time));
     }
 }
 
-Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_data, uint32_t measurement_time, uint32_t telemetrySeqNumber)
+Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_data, uint32_t measurement_time,
+                                           uint32_t telemetrySeqNumber)
 {
 
   DatagramBuilder builder = DatagramBuilder (SENSOR_DATAGRAM_PAYLOAD_SIZE, TELEMETRY_ERT18, telemetrySeqNumber);

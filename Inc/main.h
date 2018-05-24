@@ -59,10 +59,10 @@
 
 /* Private define ------------------------------------------------------------*/
 
-#define CENTRAL_TX_Pin GPIO_PIN_0
-#define CENTRAL_TX_GPIO_Port GPIOA
-#define CENTRAL_RX_Pin GPIO_PIN_1
-#define CENTRAL_RX_GPIO_Port GPIOA
+#define AB_TX_Pin GPIO_PIN_0
+#define AB_TX_GPIO_Port GPIOA
+#define AB_RX_Pin GPIO_PIN_1
+#define AB_RX_GPIO_Port GPIOA
 #define IMU_NSS_Pin GPIO_PIN_4
 #define IMU_NSS_GPIO_Port GPIOA
 #define IMU_SCK_Pin GPIO_PIN_5
@@ -100,10 +100,6 @@
 #define IMU_INT0_Pin GPIO_PIN_5
 #define IMU_INT0_GPIO_Port GPIOD
 #define IMU_INT0_EXTI_IRQn EXTI9_5_IRQn
-#define HUM900_TX_Pin GPIO_PIN_6
-#define HUM900_TX_GPIO_Port GPIOB
-#define HUM900_RX_Pin GPIO_PIN_7
-#define HUM900_RX_GPIO_Port GPIOB
 
 /* ########################## Assert Selection ############################## */
 /**

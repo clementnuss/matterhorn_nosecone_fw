@@ -76,12 +76,10 @@ void processReceivedPacket ()
     {
     case 0x14:
       {
-        transmitFirstEvent ();
         break;
       }
     case 0x22:
       {
-        transmitSecondEvent ();
         break;
       }
     }

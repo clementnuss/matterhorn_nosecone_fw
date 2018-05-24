@@ -7,8 +7,6 @@
 
 #include "Misc/Common.h"
 
-#ifdef CENTRALBODY
-
 #include "main.h"
 #include "stm32f4xx_hal.h"
 #include <stdio.h>
@@ -235,5 +233,3 @@ void command_aerobrake_controller (float altitude, float speed)
  return;
  }
  */
-
-#endif

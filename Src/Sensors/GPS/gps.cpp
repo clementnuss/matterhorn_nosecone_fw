@@ -44,8 +44,10 @@ void TK_GPS (void const * argument)
 
       if (gpsParser.time.isUpdated ())
         {
+          /*
           Telemetry_Message m = createGPSDatagram (gpsSequenceNumber++);
           osMessagePut (xBeeQueueHandle, (uint32_t) &m, 50);
+          */
         }
 
       if (gpsParser.satellites.isValid ())

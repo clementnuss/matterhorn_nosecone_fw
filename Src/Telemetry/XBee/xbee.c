@@ -37,7 +37,7 @@ static uint8_t XBEE_FRAME_OPTIONS[XBEE_FRAME_OPTIONS_SIZE] =
       0x43 };          // Transmit options (disable ACK and Route discovery)
 
 uint8_t XBEE_FRAME_OPTIONS_CRC = 0;
-uint8_t XBEE_SEND_FRAME_TIMEOUT_MS = 40;
+uint16_t XBEE_SEND_FRAME_TIMEOUT_MS = 32;
 
 uint8_t currentCrc = 0;
 uint8_t payloadBuffer[XBEE_PAYLOAD_MAX_SIZE];
@@ -48,20 +48,22 @@ void TK_xBeeTelemetry (const void* args)
 {
 
   initXbee ();
-  uint32_t packetStartTime = 0;
+  uint32_t packetStartTime = HAL_GetTick;
 
   for (;;)
     {
 
-      if ((currentXbeeTxBufPos > 0) && (HAL_GetTick () - packetStartTime) > XBEE_SEND_FRAME_TIMEOUT_MS)
+      uint32_t elapsed = HAL_GetTick() - packetStartTime;
+      if ((currentXbeeTxBufPos > 0) && (elapsed) > XBEE_SEND_FRAME_TIMEOUT_MS)
         {
           sendXbeeFrame();
+          packetStartTime = HAL_GetTick();
         }
 
       osEvent event = osMessageGet (xBeeQueueHandle, 5);
       if (event.status == osEventMessage)
         {
-          if (currentXbeeTxBufPos == 0){
+          if (currentXbeeTxBufPos == 0 && elapsed != 0){
               packetStartTime = HAL_GetTick();
           }
 
@@ -158,9 +160,6 @@ void HAL_UART_TxCpltCallback (UART_HandleTypeDef *huart)
 
 void initXbee ()
 {
-
-  uint packets_per_second = XBEE_PERFORMANCE_BPS / (8 * (XBEE_PAYLOAD_MAX_SIZE + 36));
-  XBEE_SEND_FRAME_TIMEOUT_MS = 1000 / packets_per_second;
 
   uint8_t checksum = 0;
   for (int i = 0; i < sizeof(XBEE_FRAME_OPTIONS); ++i)

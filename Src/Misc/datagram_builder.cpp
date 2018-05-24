@@ -52,18 +52,9 @@ DatagramBuilder::DatagramBuilder (uint16_t datagramPayloadSize, uint8_t datagram
 
 void DatagramBuilder::write8 (uint8_t val)
 {
-  if (currentIdx + 1 < datagramSize)
+  if (currentIdx + 1 <= datagramSize)
     {
       *(uint8_t*) ((uint8_t*) datagramPtr + currentIdx++) = val;
-    }
-}
-
-void DatagramBuilder::write16u (uint16_t val)
-{
-  if (currentIdx + 2 < datagramSize)
-    {
-      *(uint16_t*) ((uint8_t*) datagramPtr + currentIdx) = __bswap16(val);
-      currentIdx += 2;
     }
 }
 
@@ -76,7 +67,7 @@ Telemetry_Message DatagramBuilder::finalizeDatagram ()
     }
 
   datagramCrc = FinalizeCRC (datagramCrc);
-  write16u (datagramCrc);
+  write16 (datagramCrc);
 
   Telemetry_Message m =
     { .ptr = datagramPtr, .size = datagramSize };

@@ -53,7 +53,7 @@ void initBarometer ()
 
   HAL_GPIO_WritePin (ABS_P_SENS_ENn_GPIO_Port, ABS_P_SENS_ENn_Pin, RESET);
   HAL_GPIO_WritePin (DIF_P_SENS_ENn_GPIO_Port, DIF_P_SENS_ENn_Pin, RESET);
-  HAL_Delay (2);
+  HAL_Delay (40);
 
   uint8_t command = BAROMETER_RESET;
   HAL_I2C_Master_Transmit (hi2c, BAROMETER_ADDR, &command, 1, 5);
@@ -132,21 +132,23 @@ void TK_fetchBarometer ()
 
       //TODO: parse one of the pitot while barometer takes measure
 
-      if ((elapsed = (HAL_GetTick () - samplingStart))
-          < SamplingDelayMs[BAROMETER_OSR])
+      if ((elapsed = (HAL_GetTick () - samplingStart)) < SamplingDelayMs[BAROMETER_OSR])
         {
           osDelay (SamplingDelayMs[BAROMETER_OSR] - elapsed);
         }
 
       i2cTransmitCommand (CMD_READ_ADC);
-      delayUs (10);
+      delayUs (40);
       i2cReceive (rxBuffer, 3);
+      if (rxBuffer[0] == 0)
+        {
+          continue;
+        }
       uint32_t d2 = rxBuffer[0] << 16 | rxBuffer[1] << 8 | rxBuffer[2];
 
       i2cTransmitCommand (CMD_START_D1(BAROMETER_OSR));
       samplingStart = HAL_GetTick ();
-      if ((elapsed = (HAL_GetTick () - samplingStart))
-          < SamplingDelayMs[BAROMETER_OSR])
+      if ((elapsed = (HAL_GetTick () - samplingStart)) < SamplingDelayMs[BAROMETER_OSR])
         {
           osDelay (SamplingDelayMs[BAROMETER_OSR] - elapsed);
         }
@@ -154,10 +156,13 @@ void TK_fetchBarometer ()
       i2cTransmitCommand (CMD_READ_ADC);
       delayUs (10);
       i2cReceive (rxBuffer, 3);
+      if (rxBuffer[0] == 0)
+        {
+          continue;
+        }
       uint32_t d1 = rxBuffer[0] << 16 | rxBuffer[1] << 8 | rxBuffer[2];
 
-      BARO_data* newBaroData = &BARO_buffer[(currentBaroSeqNumber + 1)
-      % CIRC_BUFFER_SIZE];
+      BARO_data* newBaroData = &BARO_buffer[(currentBaroSeqNumber + 1) % CIRC_BUFFER_SIZE];
       if (processD1D2 (d1, d2, newBaroData) == osOK)
         {
           currentBaroSeqNumber++;
@@ -224,6 +229,9 @@ osStatus processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
   if ((ret->temperature > MAX_TEMPERATURE) | (ret->temperature < MIN_TEMPERATURE) | (ret->pressure > MAX_PRESSURE)
       | (ret->pressure < MIN_PRESSURE))
     {
+      HAL_GPIO_WritePin (AUX_IO_10_GPIO_Port, AUX_IO_10_Pin, SET);
+      HAL_GPIO_WritePin (AUX_IO_10_GPIO_Port, AUX_IO_10_Pin, RESET);
+
       return osErrorOS;
     }
 
@@ -236,11 +244,21 @@ osStatus processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
 
 inline float altitudeFromPressure (float pressure_hPa)
 {
-  return 44330 * (1.0 - pow (pressure_hPa / ADJUSTED_SEA_LEVEL_PRESSURE, 0.1903));
+  float altitude = 44330 * (1.0 - pow (pressure_hPa / ADJUSTED_SEA_LEVEL_PRESSURE, 0.1903));
+
+  if (altitude < 100 || altitude > 5000)
+    {
+      return 0;
+    }
+  else
+    {
+      return altitude;
+    }
 }
 
 osStatus i2cReceive (uint8_t* rxBuffer, uint16_t size)
 {
+  //HAL_I2C_Master_Receive(hi2c, BAROMETER_ADDR, rxBuffer, size, 1);
   HAL_I2C_Master_Receive_DMA (hi2c, BAROMETER_ADDR, rxBuffer, size);
   return osSemaphoreWait (pressureSensorI2cSemHandle, I2C_TIMEOUT);
 }

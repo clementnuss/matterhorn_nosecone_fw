@@ -18,7 +18,9 @@ class DatagramBuilder
 public:
   DatagramBuilder (uint16_t datagramSize, uint8_t datagramType, uint32_t datagramSequenceNumber);
   void write8 (uint8_t);
-  void write16u (uint16_t);
+
+  template<typename T>
+  void write16 (T val);
 
   Telemetry_Message finalizeDatagram ();
 
@@ -33,10 +35,21 @@ private:
 
 };
 
+
+template<typename T>
+  inline void DatagramBuilder::write16 (T val)
+  {
+    if (currentIdx + 2 <= datagramSize)
+      {
+        *(uint16_t*) ((uint8_t*) datagramPtr + currentIdx) = __bswap16 (*((uint16_t*) &val));
+        currentIdx += 2;
+      }
+  }
+
 template<typename T>
   inline void DatagramBuilder::write32 (T val)
   {
-    if (currentIdx + 4 < datagramSize)
+    if (currentIdx + 4 <= datagramSize)
       {
         *(uint32_t*) ((uint8_t*) datagramPtr + currentIdx) = __bswap32 (*((uint32_t*) &val));
         currentIdx += 4;
