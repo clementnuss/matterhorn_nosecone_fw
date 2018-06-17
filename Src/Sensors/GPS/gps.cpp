@@ -44,16 +44,10 @@ void TK_GPS (void const * argument)
 
       if (gpsParser.time.isUpdated ())
         {
-          /*
+
           Telemetry_Message m = createGPSDatagram (gpsSequenceNumber++);
           osMessagePut (xBeeQueueHandle, (uint32_t) &m, 50);
-          */
-        }
 
-      if (gpsParser.satellites.isValid ())
-        {
-          uint8_t command = gpsParser.satellites.value ();
-          HAL_UART_Transmit (gps_huart, &command, 1, 10);
         }
 
       osDelay (10);

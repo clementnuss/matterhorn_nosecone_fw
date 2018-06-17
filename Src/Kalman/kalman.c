@@ -175,6 +175,7 @@ double Interpolation_Thrust (ekf_t *ekf)
             }
         }
     }
+  return 0.0;
 }
 
 static void Thrust (ekf_t *ekf)

@@ -9,8 +9,7 @@
  * Code based on this library: https://github.com/freetronics/BaroSensor/blob/master/BaroSensor.cpp
  */
 
-#include <Sensors/barometer.h>
-
+#include <Sensors/pressure_sensors.h>
 #include "stm32f4xx_hal.h"
 #include "Misc/Common.h"
 #if(SIMULATION == 1)
@@ -22,6 +21,7 @@ extern I2C_HandleTypeDef hi2c2;
 I2C_HandleTypeDef* hi2c;
 extern osSemaphoreId pressureSensorI2cSemHandle;
 extern BARO_data BARO_buffer[];
+extern float32_t PITOT_buffer[];
 
 /* i2c address of module */
 #define BAROMETER_ADDR 0xEC
@@ -130,7 +130,30 @@ void TK_fetchBarometer ()
       samplingStart = HAL_GetTick ();
       // D2 command started, we need to wait a few milliseconds
 
-      //TODO: parse one of the pitot while barometer takes measure
+      uint8_t pitot_buffer_high_range[2];
+      i2cReceive (pitot_buffer_high_range, 2, DIFFERENTIAL_PRESSURE_SENSOR_HIGH_RANGE_ADDRESS);
+      uint16_t high_range_output = (pitot_buffer_high_range[0] << 8 | pitot_buffer_high_range[1])
+          & DIFF_PRESS_OUTPUT_MASK;
+
+      uint8_t pitot_buffer_low_range[2];
+      i2cReceive (pitot_buffer_low_range, 2, DIFFERENTIAL_PRESSURE_SENSOR_LOW_RANGE_ADDRESS);
+      uint16_t low_range_output = (pitot_buffer_low_range[0] << 8 | pitot_buffer_low_range[1]) & DIFF_PRESS_OUTPUT_MASK;
+
+      float32_t low_range_pressure = (low_range_output - DIFF_PRESS_OUTPUT_MIN)
+          * ( DIFF_PRESS_LOW_RANGE_P_MAX - DIFF_PRESS_LOW_RANGE_P_MIN) / DIFF_PRESS_OUTPUT_RANGE +
+      DIFF_PRESS_LOW_RANGE_P_MIN;
+
+      float32_t high_range_pressure = (high_range_output - DIFF_PRESS_OUTPUT_MIN)
+          * ( DIFF_PRESS_HIGH_RANGE_P_MAX - DIFF_PRESS_HIGH_RANGE_P_MIN) / DIFF_PRESS_OUTPUT_RANGE +
+      DIFF_PRESS_HIGH_RANGE_P_MIN;
+
+      float32_t pressure_psi = interpolatePitotReadings (low_range_pressure, high_range_pressure);
+
+      float32_t air_speed = sqrt (
+          (2 * pressure_psi * 6894.76) / AIR_DENSITY);
+
+      PITOT_buffer[(currentPitotSeqNumber + 1) % CIRC_BUFFER_SIZE] = air_speed;
+      currentPitotSeqNumber++;
 
       if ((elapsed = (HAL_GetTick () - samplingStart)) < SamplingDelayMs[BAROMETER_OSR])
         {
@@ -139,7 +162,7 @@ void TK_fetchBarometer ()
 
       i2cTransmitCommand (CMD_READ_ADC);
       delayUs (40);
-      i2cReceive (rxBuffer, 3);
+      i2cReceive (rxBuffer, 3, BAROMETER_ADDR);
       if (rxBuffer[0] == 0)
         {
           continue;
@@ -155,7 +178,7 @@ void TK_fetchBarometer ()
 
       i2cTransmitCommand (CMD_READ_ADC);
       delayUs (10);
-      i2cReceive (rxBuffer, 3);
+      i2cReceive (rxBuffer, 3, BAROMETER_ADDR);
       if (rxBuffer[0] == 0)
         {
           continue;
@@ -176,6 +199,18 @@ void TK_fetchBarometer ()
     }
 
 #endif
+}
+
+float32_t interpolatePitotReadings (float32_t low_range_pressure, float32_t high_range_pressure)
+{
+  if (low_range_pressure < 0.95 && high_range_pressure < 1.0)
+    {
+      return low_range_pressure;
+    }
+  else
+    {
+      return high_range_pressure;
+    }
 }
 
 osStatus processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
@@ -229,9 +264,6 @@ osStatus processD1D2 (uint32_t d1, uint32_t d2, BARO_data* ret)
   if ((ret->temperature > MAX_TEMPERATURE) | (ret->temperature < MIN_TEMPERATURE) | (ret->pressure > MAX_PRESSURE)
       | (ret->pressure < MIN_PRESSURE))
     {
-      HAL_GPIO_WritePin (AUX_IO_10_GPIO_Port, AUX_IO_10_Pin, SET);
-      HAL_GPIO_WritePin (AUX_IO_10_GPIO_Port, AUX_IO_10_Pin, RESET);
-
       return osErrorOS;
     }
 
@@ -256,12 +288,12 @@ inline float altitudeFromPressure (float pressure_hPa)
     }
 }
 
-osStatus i2cReceive (uint8_t* rxBuffer, uint16_t size)
+osStatus i2cReceive (uint8_t* rxBuffer, uint16_t size, uint8_t device_address)
 {
-  //HAL_I2C_Master_Receive(hi2c, BAROMETER_ADDR, rxBuffer, size, 1);
-  HAL_I2C_Master_Receive_DMA (hi2c, BAROMETER_ADDR, rxBuffer, size);
+  HAL_I2C_Master_Receive_DMA (hi2c, device_address, rxBuffer, size);
   return osSemaphoreWait (pressureSensorI2cSemHandle, I2C_TIMEOUT);
 }
+
 osStatus i2cTransmitCommand (uint8_t command)
 {
   HAL_I2C_Master_Transmit_DMA (hi2c, BAROMETER_ADDR, &command, 1);

@@ -20,7 +20,13 @@
 
 #define SIMULATION 0 // 0 production mode, 1 simulation mode
 #define NOSECONE
-//#define CENTRALBODY
+
+#define FLAPPYFLAPPY
+//#define SHURIKEN
+
+#if defined(FLAPPYFLAPPY) && defined(SHURIKEN)
+#error SHURIKEN and FLAPPYFLAPPY cannot be both defined
+#endif
 
 #if defined(NOSECONE) && defined(CENTRALBODY)
 #error CENTRALBODY and NOSECONE cannot be both defined
@@ -42,6 +48,7 @@ volatile uint32_t LIFTOFF_TIME;
 
 volatile uint32_t currentImuSeqNumber;
 volatile uint32_t currentBaroSeqNumber;
+volatile uint32_t currentPitotSeqNumber;
 
 extern IMU_data IMU_buffer[];
 extern BARO_data BARO_buffer[];

@@ -56,8 +56,8 @@
 #include "Misc/Common.h"
 
 #include <Sensors/imu.h>
-#include <Sensors/barometer.h>
 #include <Sensors/gps.h>
+#include <Sensors/pressure_sensors.h>
 #include <Telemetry/xbee.h>
 
 /* USER CODE END Includes */
@@ -90,6 +90,7 @@ osThreadId xBee_RCHandle;
 osThreadId state_machineHandle;
 osThreadId kalmanFilterHandle;
 osThreadId poll_gpsHandle;
+osThreadId airbrakesHandle;
 osMessageQId xBeeQueueHandle;
 osSemaphoreId IMU_IntSemHandle;
 osSemaphoreId xBeeTxBufferSemHandle;
@@ -102,6 +103,7 @@ int startSimulation = 1;
 
 IMU_data IMU_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 BARO_data BARO_buffer[CIRC_BUFFER_SIZE] CCMRAM;
+BARO_data PITOT_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 
 UART_HandleTypeDef* xBee_huart;
 UART_HandleTypeDef* airbrake_huart;
@@ -128,6 +130,7 @@ extern void TK_xBee_receive(void const * argument);
 extern void TK_state_machine(void const * argument);
 extern void TK_Kalman(void const * argument);
 extern void TK_GPS(void const * argument);
+extern void TK_ab_controller(void const * argument);
 static void MX_NVIC_Init(void);
 
 /* USER CODE BEGIN PFP */
@@ -149,9 +152,9 @@ void initPeripherals ();
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
-  HAL_Delay(500);
-
+  uint32_t delay = 2000000; // small delay at boot up
+  while (delay--)
+    asm("nop");
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -249,8 +252,12 @@ int main(void)
   kalmanFilterHandle = osThreadCreate(osThread(kalmanFilter), NULL);
 
   /* definition and creation of poll_gps */
-  osThreadDef(poll_gps, TK_GPS, osPriorityIdle, 0, 300);
+  osThreadDef(poll_gps, TK_GPS, osPriorityBelowNormal, 0, 300);
   poll_gpsHandle = osThreadCreate(osThread(poll_gps), NULL);
+
+  /* definition and creation of airbrakes */
+  osThreadDef(airbrakes, TK_ab_controller, osPriorityAboveNormal, 0, 512);
+  airbrakesHandle = osThreadCreate(osThread(airbrakes), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -265,7 +272,7 @@ int main(void)
 
   /* add queues, ... */
 
-  vQueueAddToRegistry(xBeeQueueHandle, "xBee incoming queue");
+  vQueueAddToRegistry (xBeeQueueHandle, "xBee incoming queue");
   /* USER CODE END RTOS_QUEUES */
  
 
@@ -312,7 +319,7 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
-  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLN = 72;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 8;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -326,10 +333,10 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
   {
     _Error_Handler(__FILE__, __LINE__);
   }
@@ -561,10 +568,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, ABS_P_SENS_ENn_Pin|DIF_P_SENS_ENn_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, SD_ENn_Pin|GPS_RESETn_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(SD_ENn_GPIO_Port, SD_ENn_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPS_SWITCH_GPIO_Port, GPS_SWITCH_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOE, GPS_RESETn_Pin|GPS_SWITCH_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(IMU_ENn_GPIO_Port, IMU_ENn_Pin, GPIO_PIN_SET);
@@ -650,6 +657,10 @@ void HAL_UART_RxCpltCallback (UART_HandleTypeDef *huart)
     {
       xBee_rxCpltCallback ();
     }
+  else if (huart == airbrake_huart)
+    {
+      airbrake_rxCpltCallback();
+    }
 }
 
 /*
@@ -671,16 +682,6 @@ void StartDefaultTask(void const * argument)
   /* Infinite loop */
   for (;;)
     {
-      /*
-       IMU_data* current_IMU_data = &IMU_buffer[currentImuSeqNumber % CIRC_BUFFER_SIZE];
-
-       void* ptr = pvPortMalloc (sizeof(IMU_data));
-       IMU_data* d = ptr;
-       *d = *current_IMU_data;
-       Telemetry_Message m =
-       { .ptr = ptr, .size = sizeof(IMU_data) };
-       osMessagePut (xBeeQueueHandle, &m, 50);
-       */
       osDelay (10);
     }
   /* USER CODE END 5 */ 

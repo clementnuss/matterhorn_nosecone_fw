@@ -125,7 +125,7 @@ void TK_state_machine (void const * argument)
               {
 
                 // Compute lift-off triggers for acceleration
-                uint8_t liftoffAccelTrig = (abs_fl32(imu_data->acceleration.x) > ROCKET_CST_LIFTOFF_TRIG_ACCEL);
+                uint8_t liftoffAccelTrig = (abs_fl32 (imu_data->acceleration.x) > ROCKET_CST_LIFTOFF_TRIG_ACCEL);
 
                 // detect lift-off
                 if (liftoffAccelTrig)
@@ -151,7 +151,7 @@ void TK_state_machine (void const * argument)
               {
                 currentState = STATE_COAST; // switch to coast state
 #ifdef CENTRALBODY
-                shortBip ();
+                    shortBip ();
 #endif
               }
             break;
@@ -200,11 +200,6 @@ void TK_state_machine (void const * argument)
                     time_tmp = HAL_GetTick (); // save time to mute sensors while ejection occures
                     currentState = STATE_PRIMARY; // switch to primary descent phase
 
-#ifdef CENTRALBODY
-                    longBip ();
-                    triggerFirstEvent (); // Trigger ejection charges
-#endif
-
                     //TODO: Close Airbrakes
                   }
               }
@@ -242,11 +237,6 @@ void TK_state_machine (void const * argument)
                     time_tmp = HAL_GetTick (); // save current time to start differed touchdown detection rate
                     currentState = STATE_SECONDARY; // switch to secondary recovery phase
                     td_last_alt = baro_data->altitude; // save altitude measurement for touchdown detection
-
-#ifdef CENTRALBODY
-                    longBip ();
-                    triggerSecondEvent (); // Trigger ejection charges
-#endif
 
                   }
               }

@@ -19,6 +19,7 @@
 
 extern IMU_data IMU_buffer[];
 extern BARO_data BARO_buffer[];
+extern float32_t PITOT_buffer[];
 
 extern osMessageQId xBeeQueueHandle;
 
@@ -27,6 +28,8 @@ void TK_data (void const * args)
 
   uint32_t lastImuSeqNumber = 0, lastBaroSeqNumber = 0, telemetrySeqNumber = 0;
 
+  osDelay (800); //Wait for the first values to be written by the IMU and barometer.
+
   for (;;)
     {
 
@@ -34,19 +37,21 @@ void TK_data (void const * args)
 
       IMU_data* imu_data = &IMU_buffer[currentImuSeqNumber % CIRC_BUFFER_SIZE];
       BARO_data* baro_data = &BARO_buffer[currentBaroSeqNumber % CIRC_BUFFER_SIZE];
+      float32_t air_speed = PITOT_buffer[currentPitotSeqNumber % CIRC_BUFFER_SIZE];
 
       lastImuSeqNumber = currentImuSeqNumber;
       lastBaroSeqNumber = currentBaroSeqNumber;
 
-      Telemetry_Message m = createTelemetryDatagram (imu_data, baro_data, measurement_time, telemetrySeqNumber++);
+      Telemetry_Message m = createTelemetryDatagram (imu_data, baro_data, air_speed, measurement_time,
+                                                     telemetrySeqNumber++);
       osMessagePut (xBeeQueueHandle, (uint32_t) &m, 50);
 
-      osDelay (15 - (HAL_GetTick() - measurement_time));
+      osDelay (15 - (HAL_GetTick () - measurement_time));
     }
 }
 
-Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_data, uint32_t measurement_time,
-                                           uint32_t telemetrySeqNumber)
+Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_data, float32_t air_speed,
+                                           uint32_t measurement_time, uint32_t telemetrySeqNumber)
 {
 
   DatagramBuilder builder = DatagramBuilder (SENSOR_DATAGRAM_PAYLOAD_SIZE, TELEMETRY_ERT18, telemetrySeqNumber);
@@ -65,6 +70,8 @@ Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_d
 
   builder.write32<float32_t> (baro_data->temperature);
   builder.write32<float32_t> (baro_data->pressure);
+
+  builder.write32<float32_t> (air_speed);
 
   return builder.finalizeDatagram ();
 }
