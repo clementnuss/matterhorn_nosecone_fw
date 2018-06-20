@@ -76,7 +76,6 @@ void processReceivedPacket ()
     {
     case 0x14:
       {
-        HAL_GPIO_TogglePin(GPS_SWITCH_GPIO_Port, GPS_SWITCH_Pin);
         break;
       }
     case 0x22:

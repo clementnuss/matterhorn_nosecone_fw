@@ -21,8 +21,8 @@
 #define SIMULATION 0 // 0 production mode, 1 simulation mode
 #define NOSECONE
 
-#define FLAPPYFLAPPY
-//#define SHURIKEN
+//#define FLAPPYFLAPPY
+#define SHURIKEN
 
 #if defined(FLAPPYFLAPPY) && defined(SHURIKEN)
 #error SHURIKEN and FLAPPYFLAPPY cannot be both defined
@@ -43,12 +43,18 @@ enum states
   STATE_CALIBRATION, STATE_IDLE, STATE_LIFTOFF, STATE_COAST, STATE_PRIMARY, STATE_SECONDARY, STATE_TOUCHDOWN
 };
 
-uint8_t currentState;
+volatile uint32_t flight_status;
+volatile float32_t airbrakes_angle;
+extern volatile float32_t air_speed_state_estimate, altitude_estimate;
+
+volatile uint8_t currentState;
 volatile uint32_t LIFTOFF_TIME;
 
 volatile uint32_t currentImuSeqNumber;
 volatile uint32_t currentBaroSeqNumber;
+volatile uint32_t currentBaroTimestamp;
 volatile uint32_t currentPitotSeqNumber;
+
 
 extern IMU_data IMU_buffer[];
 extern BARO_data BARO_buffer[];

@@ -20,6 +20,7 @@
 #define Central_angle_max_margins 88.15 //To be defined precisely, lets do it with this value for now
 
 extern UART_HandleTypeDef* airbrake_huart;
+extern volatile float32_t airbrakes_angle;
 
 //float correction_margin_error_integration = 0;
 //float correction_margin_last_error = 0;
@@ -96,9 +97,9 @@ void aerobrakes_control_init (void)
   HAL_UART_Transmit (airbrake_huart, command, 6, 30);
   command = "PD5\r";
   HAL_UART_Transmit (airbrake_huart, command, 4, 30);
-  command = "LPC1000\r"; // peak current max, to be redefined
+  command = "LPC2500\r"; // peak current max, to be redefined
   HAL_UART_Transmit (airbrake_huart, command, 8, 30);
-  command = "LCC800\r"; // continuous current max_to be redefined
+  command = "LCC2000\r"; // continuous current max_to be redefined
   HAL_UART_Transmit (airbrake_huart, command, 8, 30);
   //Enable
   command = "EN\r";
@@ -180,6 +181,7 @@ float angle_tab (float altitude, float speed)
 void command_aerobrake_controller (float altitude, float speed)
 {
   float opt_act_position_deg = angle_tab (altitude, speed);
+  airbrakes_angle = opt_act_position_deg;
 //    float opt_act_position_deg = 0.0;
   int opt_act_position_inc = tab_deg_to_inc_converter (opt_act_position_deg);
   int central_inc_max_margins = tab_deg_to_inc_converter (Central_angle_max_margins);

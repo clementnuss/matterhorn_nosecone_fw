@@ -23,6 +23,9 @@ extern float32_t PITOT_buffer[];
 
 extern osMessageQId xBeeQueueHandle;
 
+extern int startSimulation;
+extern volatile float32_t high_range_pressure;
+
 void TK_data (void const * args)
 {
 
@@ -32,17 +35,16 @@ void TK_data (void const * args)
 
   for (;;)
     {
-
       uint32_t measurement_time = HAL_GetTick ();
 
       IMU_data* imu_data = &IMU_buffer[currentImuSeqNumber % CIRC_BUFFER_SIZE];
       BARO_data* baro_data = &BARO_buffer[currentBaroSeqNumber % CIRC_BUFFER_SIZE];
-      float32_t air_speed = PITOT_buffer[currentPitotSeqNumber % CIRC_BUFFER_SIZE];
+      float32_t pitot_press = PITOT_buffer[currentPitotSeqNumber % CIRC_BUFFER_SIZE];
 
       lastImuSeqNumber = currentImuSeqNumber;
       lastBaroSeqNumber = currentBaroSeqNumber;
 
-      Telemetry_Message m = createTelemetryDatagram (imu_data, baro_data, air_speed, measurement_time,
+      Telemetry_Message m = createTelemetryDatagram (imu_data, baro_data, pitot_press, measurement_time,
                                                      telemetrySeqNumber++);
       osMessagePut (xBeeQueueHandle, (uint32_t) &m, 50);
 
@@ -50,7 +52,7 @@ void TK_data (void const * args)
     }
 }
 
-Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_data, float32_t air_speed,
+Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_data, float32_t pitot_press,
                                            uint32_t measurement_time, uint32_t telemetrySeqNumber)
 {
 
@@ -64,14 +66,14 @@ Telemetry_Message createTelemetryDatagram (IMU_data* imu_data, BARO_data* baro_d
   builder.write32<float32_t> (imu_data->acceleration.y);
   builder.write32<float32_t> (imu_data->acceleration.z);
 
-  builder.write32<float32_t> (imu_data->eulerAngles.x);
-  builder.write32<float32_t> (imu_data->eulerAngles.y);
-  builder.write32<float32_t> (imu_data->eulerAngles.z);
+  builder.write32<float32_t> (flight_status);
+  builder.write32<float32_t> (airbrakes_angle);
+  builder.write32<float32_t> (pitot_press);
 
   builder.write32<float32_t> (baro_data->temperature);
   builder.write32<float32_t> (baro_data->pressure);
 
-  builder.write32<float32_t> (air_speed);
+  builder.write32<float32_t> (air_speed_state_estimate);
 
   return builder.finalizeDatagram ();
 }

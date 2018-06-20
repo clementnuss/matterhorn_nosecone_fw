@@ -33,6 +33,7 @@ void TK_GPS (void const * argument)
   HAL_UART_Receive_DMA (gps_huart, gpsRxBuffer, GPS_RX_BUFFER_SIZE);
 
   uint32_t gpsSequenceNumber;
+  uint32_t measurement_time = HAL_GetTick ();
 
   for (;;)
     {
@@ -42,14 +43,13 @@ void TK_GPS (void const * argument)
           gpsParser.encode (gpsRxBuffer[lastGpsDmaStreamIndex++]);
         }
 
-      if (gpsParser.time.isUpdated ())
+      if ((HAL_GetTick () - measurement_time) > 100)
         {
-
+          measurement_time = HAL_GetTick ();
           Telemetry_Message m = createGPSDatagram (gpsSequenceNumber++);
           osMessagePut (xBeeQueueHandle, (uint32_t) &m, 50);
-
+          measurement_time = HAL_GetTick ();
         }
-
       osDelay (10);
     }
 }

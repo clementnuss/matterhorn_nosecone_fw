@@ -145,6 +145,7 @@ void TK_state_machine (void const * argument)
 
         case STATE_LIFTOFF:
           {
+            flight_status = 10;
             uint32_t currentTime = HAL_GetTick ();
             // determine motor burn-out based on lift-off detection
             if ((currentTime - time_tmp) > ROCKET_CST_MOTOR_BURNTIME)
@@ -159,7 +160,7 @@ void TK_state_machine (void const * argument)
 
         case STATE_COAST:
           {
-
+            flight_status = 20;
             // TODO: Control Airbrakes
 
             // compute apogee triggers for altitude
@@ -199,7 +200,7 @@ void TK_state_machine (void const * argument)
                   {
                     time_tmp = HAL_GetTick (); // save time to mute sensors while ejection occures
                     currentState = STATE_PRIMARY; // switch to primary descent phase
-
+                    flight_status = 30;
                     //TODO: Close Airbrakes
                   }
               }
@@ -237,6 +238,7 @@ void TK_state_machine (void const * argument)
                     time_tmp = HAL_GetTick (); // save current time to start differed touchdown detection rate
                     currentState = STATE_SECONDARY; // switch to secondary recovery phase
                     td_last_alt = baro_data->altitude; // save altitude measurement for touchdown detection
+                    flight_status = 35;
 
                   }
               }
@@ -276,6 +278,7 @@ void TK_state_machine (void const * argument)
                     if (counterTdTrig)
                       {
                         currentState = STATE_TOUCHDOWN;
+                        flight_status = 40;
 #ifdef CENTRALBODY
                         shortBip ();
 #endif

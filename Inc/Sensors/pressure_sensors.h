@@ -28,7 +28,6 @@
 #define DIFF_PRESS_OUTPUT_MASK 0x3fff
 
 #define PSI_TO_PASCAL_CONVERSION_FACTOR 6894.76
-
 void initBarometer ();
 
 osStatus i2cTransmitCommand (uint8_t command);

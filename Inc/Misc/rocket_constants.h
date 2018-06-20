@@ -23,9 +23,9 @@
  * ROCKET PARAMETERS
  */
 
-#define ROCKET_CST_LIFTOFF_TRIG_ACCEL 3 // acceleration lift-off detection trigger [g]
-#define ROCKET_CST_MIN_TRIG_AGL 300 // min altitude above ground level to allow apogee detection [m]
-#define ROCKET_CST_MOTOR_BURNTIME 3250 // motor burn time [ms]
+#define ROCKET_CST_LIFTOFF_TRIG_ACCEL 5 // acceleration lift-off detection trigger [g]
+#define ROCKET_CST_MIN_TRIG_AGL 2000 // min altitude above ground level to allow apogee detection [m]
+#define ROCKET_CST_MOTOR_BURNTIME 6500 // motor burn time [ms]
 #define ROCKET_CST_REC_SECONDARY_ALT 200 // altitude of secondary recovery event [m]
 
 /*
@@ -57,7 +57,7 @@ static float currentLocationTemperature = 1.6f;
  */
 
 
-#define ADJUSTED_SEA_LEVEL_PRESSURE 1013.4
+#define ADJUSTED_SEA_LEVEL_PRESSURE 1016.4
 #define AIR_DENSITY 1.204
 
 /*

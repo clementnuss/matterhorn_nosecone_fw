@@ -22,6 +22,7 @@ I2C_HandleTypeDef* hi2c;
 extern osSemaphoreId pressureSensorI2cSemHandle;
 extern BARO_data BARO_buffer[];
 extern float32_t PITOT_buffer[];
+extern volatile float32_t high_range_pressure;
 
 /* i2c address of module */
 #define BAROMETER_ADDR 0xEC
@@ -94,8 +95,10 @@ void TK_fetchBarometer ()
   newBaroData->pressure = 0;
   newBaroData->altitude = SimData[sensorCounter][SIM_ALTITUDE];
 
+  PITOT_buffer[(currentPitotSeqNumber + 1) % CIRC_BUFFER_SIZE] = 0.0f;
   currentBaroSeqNumber++;
   sensorCounter++;
+  currentPitotSeqNumber++;
 
   for (;;)
     {
@@ -110,8 +113,11 @@ void TK_fetchBarometer ()
           newBaroData->pressure = SimData[sensorCounter][SIM_PRESSURE];
           newBaroData->altitude = SimData[sensorCounter][SIM_ALTITUDE];
 
+          PITOT_buffer[(currentPitotSeqNumber++) % CIRC_BUFFER_SIZE] = SimData[sensorCounter][SIM_VELOCITYX];
           //increment counters
           currentBaroSeqNumber++;
+          currentBaroTimestamp = HAL_GetTick();
+
           sensorCounter++;
         }
       osDelay (SimData[sensorCounter][SIM_TIMESTAMP] - SimData[sensorCounter - 1][SIM_TIMESTAMP] - 1);
@@ -147,12 +153,9 @@ void TK_fetchBarometer ()
           * ( DIFF_PRESS_HIGH_RANGE_P_MAX - DIFF_PRESS_HIGH_RANGE_P_MIN) / DIFF_PRESS_OUTPUT_RANGE +
       DIFF_PRESS_HIGH_RANGE_P_MIN;
 
-      float32_t pressure_psi = interpolatePitotReadings (low_range_pressure, high_range_pressure);
+      float32_t pitot_pressure = PSI_TO_PASCAL_CONVERSION_FACTOR * low_range_pressure;
 
-      float32_t air_speed = sqrt (
-          (2 * pressure_psi * 6894.76) / AIR_DENSITY);
-
-      PITOT_buffer[(currentPitotSeqNumber + 1) % CIRC_BUFFER_SIZE] = air_speed;
+      PITOT_buffer[(currentPitotSeqNumber + 1) % CIRC_BUFFER_SIZE] = pitot_pressure;
       currentPitotSeqNumber++;
 
       if ((elapsed = (HAL_GetTick () - samplingStart)) < SamplingDelayMs[BAROMETER_OSR])
@@ -189,6 +192,7 @@ void TK_fetchBarometer ()
       if (processD1D2 (d1, d2, newBaroData) == osOK)
         {
           currentBaroSeqNumber++;
+          currentBaroTimestamp = HAL_GetTick();
         }
       else
         {

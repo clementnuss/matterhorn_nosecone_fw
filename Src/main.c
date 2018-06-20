@@ -88,7 +88,7 @@ osThreadId fetchFBarometerHandle;
 osThreadId centralizeDataHandle;
 osThreadId xBee_RCHandle;
 osThreadId state_machineHandle;
-osThreadId kalmanFilterHandle;
+osThreadId stateEstimationHandle;
 osThreadId poll_gpsHandle;
 osThreadId airbrakesHandle;
 osMessageQId xBeeQueueHandle;
@@ -99,11 +99,11 @@ osSemaphoreId pressureSensorI2cSemHandle;
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
 
-int startSimulation = 1;
-
 IMU_data IMU_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 BARO_data BARO_buffer[CIRC_BUFFER_SIZE] CCMRAM;
 BARO_data PITOT_buffer[CIRC_BUFFER_SIZE] CCMRAM;
+
+int startSimulation;
 
 UART_HandleTypeDef* xBee_huart;
 UART_HandleTypeDef* airbrake_huart;
@@ -128,7 +128,7 @@ extern void TK_fetchBarometer(void const * argument);
 extern void TK_data(void const * argument);
 extern void TK_xBee_receive(void const * argument);
 extern void TK_state_machine(void const * argument);
-extern void TK_Kalman(void const * argument);
+extern void TK_state_estimation(void const * argument);
 extern void TK_GPS(void const * argument);
 extern void TK_ab_controller(void const * argument);
 static void MX_NVIC_Init(void);
@@ -220,15 +220,15 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityLow, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of IMU_iface */
-  osThreadDef(IMU_iface, TK_IMU, osPriorityAboveNormal, 0, 128);
+  osThreadDef(IMU_iface, TK_IMU, osPriorityNormal, 0, 128);
   IMU_ifaceHandle = osThreadCreate(osThread(IMU_iface), NULL);
 
   /* definition and creation of xBeeTelemetry */
-  osThreadDef(xBeeTelemetry, TK_xBeeTelemetry, osPriorityBelowNormal, 0, 128);
+  osThreadDef(xBeeTelemetry, TK_xBeeTelemetry, osPriorityNormal, 0, 128);
   xBeeTelemetryHandle = osThreadCreate(osThread(xBeeTelemetry), NULL);
 
   /* definition and creation of fetchFBarometer */
@@ -240,23 +240,23 @@ int main(void)
   centralizeDataHandle = osThreadCreate(osThread(centralizeData), NULL);
 
   /* definition and creation of xBee_RC */
-  osThreadDef(xBee_RC, TK_xBee_receive, osPriorityNormal, 0, 128);
+  osThreadDef(xBee_RC, TK_xBee_receive, osPriorityLow, 0, 128);
   xBee_RCHandle = osThreadCreate(osThread(xBee_RC), NULL);
 
   /* definition and creation of state_machine */
-  osThreadDef(state_machine, TK_state_machine, osPriorityHigh, 0, 512);
+  osThreadDef(state_machine, TK_state_machine, osPriorityBelowNormal, 0, 512);
   state_machineHandle = osThreadCreate(osThread(state_machine), NULL);
 
-  /* definition and creation of kalmanFilter */
-  osThreadDef(kalmanFilter, TK_Kalman, osPriorityNormal, 0, 1000);
-  kalmanFilterHandle = osThreadCreate(osThread(kalmanFilter), NULL);
+  /* definition and creation of stateEstimation */
+  osThreadDef(stateEstimation, TK_state_estimation, osPriorityHigh, 0, 1000);
+  stateEstimationHandle = osThreadCreate(osThread(stateEstimation), NULL);
 
   /* definition and creation of poll_gps */
-  osThreadDef(poll_gps, TK_GPS, osPriorityBelowNormal, 0, 300);
+  osThreadDef(poll_gps, TK_GPS, osPriorityNormal, 0, 300);
   poll_gpsHandle = osThreadCreate(osThread(poll_gps), NULL);
 
   /* definition and creation of airbrakes */
-  osThreadDef(airbrakes, TK_ab_controller, osPriorityAboveNormal, 0, 512);
+  osThreadDef(airbrakes, TK_ab_controller, osPriorityBelowNormal, 0, 512);
   airbrakesHandle = osThreadCreate(osThread(airbrakes), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -517,7 +517,7 @@ static void MX_USART6_UART_Init(void)
 {
 
   huart6.Instance = USART6;
-  huart6.Init.BaudRate = 9600;
+  huart6.Init.BaudRate = 115200;
   huart6.Init.WordLength = UART_WORDLENGTH_8B;
   huart6.Init.StopBits = UART_STOPBITS_1;
   huart6.Init.Parity = UART_PARITY_NONE;
@@ -678,6 +678,7 @@ void StartDefaultTask(void const * argument)
 {
 
   /* USER CODE BEGIN 5 */
+
 
   /* Infinite loop */
   for (;;)
